@@ -1,52 +1,79 @@
 import { NextResponse } from 'next/server';
 
-// 1. ENDPOINT DE VALIDACIÓN (Para cuando configures la URL en Meta)
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+// 1. VALIDACIÓN GENERAL DEL WEBHOOK (Meta usa GET para activar el puente)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
   const mode = searchParams.get('hub.mode');
   const token = searchParams.get('hub.verify_token');
   const challenge = searchParams.get('hub.challenge');
 
-  // Este token lo inventas tú, por ejemplo: "portal_st_token_secreto_2026"
-  const MY_VERIFY_TOKEN = "portal_st_token_secreto_2026";
+  const VERIFY_TOKEN = "portal_st_token_secreto_2026";
 
-  if (mode && token) {
-    if (mode === 'subscribe' && token === MY_VERIFY_TOKEN) {
-      console.log('¡Webhook verificado con éxito por Meta!');
-      return new Response(challenge, { status: 200 });
-    } else {
-      return new Response('Forbidden', { status: 403 });
-    }
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log("✅ Webhook verificado con éxito por Meta en GET");
+    return new Response(challenge, { status: 200 });
   }
-  return new Response('Bad Request', { status: 400 });
+  return new Response('Forbidden', { status: 403 });
 }
 
-// 2. ENDPOINT DE RECEPCIÓN (Para recibir los chats del cliente en vivo)
-export async function POST(req: Request) {
+// 2. RECEPCIÓN DE MENSAJES REALES (Meta usa POST para enviar el JSON de WhatsApp)
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     
-    // Verificamos si es un mensaje de texto entrante de WhatsApp
-    if (body.object === 'whatsapp_business_account') {
-      const entry = body.entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
-      const message = value?.messages?.[0];
+    // Imprime TODO el JSON de Meta directamente en tus logs de Vercel
+    console.log("📦 JSON de Meta Recibido:", JSON.stringify(body));
 
-      if (message && message.type === 'text') {
-        const fromNumber = message.from; // Número de teléfono del cliente
-        const messageText = message.text.body; // El texto que escribió (ej: "quiero un combo")
+    // Extracción ultra-segura basada estrictamente en tu JSON real
+    const entry = body?.entry?.[0];
+    const change = entry?.changes?.[0]?.value;
+    const message = change?.messages?.[0];
 
-        console.log(`Mensaje recibido de ${fromNumber}: ${messageText}`);
+    if (message) {
+      const customerPhone = message.from;         // "573213166885"
+      const customerMessage = message.text?.body;   // "Hola"
+      const customerName = change?.contacts?.[0]?.profile?.name || "Cliente"; // "JD"
 
-        // AQUÍ CONECTAREMOS TU CEREBRO GEMINI EN EL SIGUIENTE PASO
-        // Para responder directamente al número usando la API de Meta
+      console.log(`📩 ¡Mensaje Extraído! -> De: ${customerName} (${customerPhone}) | Mensaje: "${customerMessage}"`);
+
+      // Variables de entorno guardadas en Vercel
+      const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "1208835768972526";
+      const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+
+      if (!WHATSAPP_TOKEN) {
+        console.error("❌ Error interno: WHATSAPP_TOKEN no está definido en Vercel");
+        return NextResponse.json({ error: "Missing token" }, { status: 500 });
+      }
+
+      if (customerMessage) {
+        // Respuesta provisional del Bot antes de enganchar Gemini
+        const textoRespuesta = `🤖 ¡Hola ${customerName}! Tu backend en Vercel recibió tu mensaje de prueba: "${customerMessage}". El puente está listo.`;
+
+        const urlMeta = `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`;
+
+        const respuestaMeta = await fetch(urlMeta, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: customerPhone,
+            type: "text",
+            text: { preview_url: false, body: textoRespuesta }
+          })
+        });
+
+        const resultadoMeta = await respuestaMeta.json();
+        console.log("🚀 Respuesta enviada de vuelta a Meta:", JSON.stringify(resultadoMeta));
       }
     }
 
-    return NextResponse.json({ status: 'success' }, { status: 200 });
+    return NextResponse.json({ status: "EVENT_RECEIVED" }, { status: 200 });
   } catch (error) {
-    console.error('Error procesando webhook de WhatsApp:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("❌ Error crítico en el endpoint POST:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
