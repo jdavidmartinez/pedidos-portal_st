@@ -2,22 +2,44 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // 1. Forzar los datos reales para la prueba
-    const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "1208835768972526";
-    const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-    const MY_PHONE = "573213166885"; // Tu celular real
+    // 1. Simulación del mensaje entrante del cliente
+    // Modifica este texto para probar cómo reacciona la IA a diferentes peticiones
+    const MENSAJE_SIMULADO = "Hola, me gustaría ver el menú de hamburguesas y saber los precios"; 
 
-    if (!WHATSAPP_TOKEN) {
+    // 2. Conexión con la API de Gemini
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    
+    // Si no tienes la API Key configurada, el código te lo advertirá de inmediato
+    if (!GEMINI_API_KEY) {
       return NextResponse.json({ 
-        error: "❌ Error: WHATSAPP_TOKEN no está definido en las variables de Vercel." 
+        error: "Falta la variable de entorno GEMINI_API_KEY en Vercel." 
       }, { status: 500 });
     }
 
-    console.log(`🤖 Lanzando prueba directa de salida... ID: ${PHONE_NUMBER_ID}`);
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+    const geminiResponse = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ 
+          parts: [{ 
+            text: `Eres un bot de atención al cliente automatizado para un restaurante llamado 'Portal ST'. Responde de forma muy breve, cordial y profesional al siguiente mensaje del cliente: "${MENSAJE_SIMULADO}"` 
+          }] 
+        }]
+      })
+    });
+
+    const geminiData = await geminiResponse.json();
+    const respuestaIA = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "Error al generar respuesta con Gemini.";
+
+    // 3. Enviar la respuesta generada por Gemini a tu WhatsApp físico
+    const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "1208835768972526";
+    const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+    const MY_PHONE = "573213166885";
 
     const urlMeta = `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`;
 
-    // 2. Intentar hablarle a la API de Meta
     const respuestaMeta = await fetch(urlMeta, {
       method: 'POST',
       headers: {
@@ -29,16 +51,18 @@ export async function GET() {
         recipient_type: "individual",
         to: MY_PHONE,
         type: "text",
-        text: { preview_url: false, body: "🚀 ¡Prueba de fuego exitosa! Vercel se comunicó directamente con tu WhatsApp." }
+        text: { preview_url: false, body: respuestaIA }
       })
     });
 
     const resultadoMeta = await respuestaMeta.json();
     
-    // Devolvemos el resultado exacto de Meta a la pantalla del navegador
+    // Retornamos el diagnóstico completo en la pantalla del navegador
     return NextResponse.json({
-      status: "Petición enviada",
-      meta_response: resultadoMeta
+      status: "Ciclo de simulación completado con éxito",
+      prompt_enviado_a_ia: MENSAJE_SIMULADO,
+      respuesta_generada_por_gemini: respuestaIA,
+      meta_api_response: resultadoMeta
     });
 
   } catch (error: any) {
