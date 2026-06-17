@@ -7,7 +7,7 @@ export async function GET() {
     const MENSAJE_SIMULADO = "Hola, me gustaría ver el menú de hamburguesas y saber los precios"; 
 
     // 2. Conexión con la API de Gemini
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     
     // Si no tienes la API Key configurada, el código te lo advertirá de inmediato
     if (!GEMINI_API_KEY) {
