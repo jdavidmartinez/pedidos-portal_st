@@ -33,7 +33,6 @@ export default function LandingMenuPage() {
     if (seleccionados.length > 0) {
       const ordenInicial = `Hola, veo el menú y quiero ordenar estos productos:\n${seleccionados.join('\n')}.\n¿Me confirmas el total y tomamos el pedido?`;
       
-      // AJUSTE: Mensaje inicial mucho más cercano y familiar para el usuario
       const nuevosMensajes = [{ 
         role: 'user', 
         text: `👋 ¡Hola! Me interesa ordenar esto desde el menú web:\n${seleccionados.join(', ')}` 
@@ -103,12 +102,7 @@ export default function LandingMenuPage() {
   return (
     <div className="min-h-screen bg-stone-900 text-amber-50 font-sans pb-24 relative">
       
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { display: none; }
-        .custom-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}} />
-      
-      {/* Banner de Presentación */}
+      {/* Banner Presentation */}
       <header className="relative bg-neutral-950 text-center py-16 px-4 border-b border-amber-600/20">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000')] opacity-10 bg-cover bg-center"></div>
         <div className="relative">
@@ -117,14 +111,19 @@ export default function LandingMenuPage() {
         </div>
       </header>
 
-      {/* Navegación por Pestañas */}
-      <nav className="sticky top-0 z-40 bg-neutral-950/95 backdrop-blur-md border-b border-stone-850 px-4 py-3 overflow-x-auto flex gap-2 custom-scrollbar">
+      {/* 
+        FIXED LAYOUT: Removed 'sticky top-0 z-40' to allow natural page scrolling.
+        The navigation block now scrolls out of view naturally on mobile layouts.
+      */}
+      <nav className="relative bg-neutral-950/95 border-b border-stone-850 px-4 py-4 grid grid-cols-1 gap-2 sm:grid-cols-3 max-w-4xl mx-auto w-full">
         {Object.keys(MENU_PORTAL).map((cat) => (
           <button 
             key={cat} 
             onClick={() => setCategoriaActiva(cat)} 
-            className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all whitespace-nowrap ${
-              categoriaActiva === cat ? 'bg-amber-500 text-neutral-950 shadow-md' : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+            className={`w-full px-5 py-3 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${
+              categoriaActiva === cat 
+                ? 'bg-amber-500 text-neutral-950 shadow-lg shadow-amber-500/10' 
+                : 'bg-stone-800 text-stone-300 hover:bg-stone-700 hover:text-stone-100'
             }`}
           >
             {cat}
@@ -132,7 +131,7 @@ export default function LandingMenuPage() {
         ))}
       </nav>
 
-      {/* Catálogo de Productos */}
+      {/* Products Catalog Grid */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2">
           {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
@@ -174,7 +173,7 @@ export default function LandingMenuPage() {
         </div>
       </main>
 
-      {/* Botón Flotante con efecto Hover y Active */}
+      {/* Floating Action CTA Button */}
       <div className="fixed bottom-6 inset-x-4 z-40 text-center">
         <button 
           onClick={iniciarOrdenConIA}
@@ -184,7 +183,7 @@ export default function LandingMenuPage() {
         </button>
       </div>
 
-      {/* MODAL DEL CHAT */}
+      {/* Interactive Chat Modal Panel */}
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-neutral-900 w-full sm:max-w-md h-[80vh] sm:h-[600px] rounded-t-2xl sm:rounded-2xl border border-stone-800 flex flex-col justify-between shadow-2xl overflow-hidden">
