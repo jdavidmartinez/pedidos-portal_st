@@ -16,7 +16,6 @@ export default function LandingMenuPage() {
   const [inputUsuario, setInputUsuario] = useState('');
   const [cargando, setCargando] = useState(false);
 
-  // Controladores de estado del flujo de orden y formulario
   const [isConfirmedByAI, setIsConfirmedByAI] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -30,7 +29,6 @@ export default function LandingMenuPage() {
     }));
   };
 
-  // PASO 1: Abre el modal e inicia el diálogo con Gemini en español incluyendo la regla del domicilio
   const iniciarOrdenConIA = async () => {
     setIsChatOpen(true);
     setIsConfirmedByAI(false);
@@ -41,14 +39,8 @@ export default function LandingMenuPage() {
       .map(([name, qty]) => `${qty}x ${name}`);
 
     if (seleccionados.length > 0) {
-      // Prompt del sistema enviado a la IA para indicarle el idioma y la advertencia del domicilio
       const ordenInicial = `Hola, quiero ordenar los siguientes productos del menú:\n${seleccionados.join('\n')}.\nPor favor calcula el precio total y confirma mi pedido en español. Recuerda informarme explícitamente que el costo NO incluye el domicilio, y que el valor del envío será confirmado por el restaurante al enviar el pedido.`;
-      
-      const nuevosMensajes = [{ 
-        role: 'user', 
-        text: `👋 ¡Hola! Quiero revisar este pedido:\n${seleccionados.join(', ')}` 
-      } as Mensaje];
-      
+      const nuevosMensajes = [{ role: 'user', text: `👋 ¡Hola! Quiero revisar este pedido:\n${seleccionados.join(', ')}` } as Mensaje];
       setMensajes(nuevosMensajes);
       setCargando(true);
 
@@ -61,26 +53,22 @@ export default function LandingMenuPage() {
         const data = await response.json();
         setMensajes([...nuevosMensajes, { role: 'bot', text: data.respuesta }]);
       } catch (err) {
-        console.error("Error al comunicarse con la API de Gemini:", err);
+        console.error("Error communicating with AI:", err);
       } finally {
         setCargando(false);
       }
     } else {
-      setMensajes([{ 
-        role: 'bot', 
-        text: '¡Hola! Tu canasta está vacía. Por favor, selecciona algunos productos del menú antes de iniciar el proceso de compra.' 
-      }]);
+      // Si la canasta está vacía, iniciamos con el saludo pero permitimos la interacción libre
+      setMensajes([{ role: 'bot', text: '¡Hola! Tu canasta está vacía. Selecciona productos del menú o cuéntame directamente por aquí qué te gustaría ordenar.' }]);
     }
   };
 
-  // PASO 2: Permite la conversación manual con la IA en español
   const manejarEnvioManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputUsuario.trim() || cargando) return;
 
     const texto = inputUsuario;
     setInputUsuario('');
-    
     const nuevosMensajes = [...mensajes, { role: 'user', text: texto } as Mensaje];
     setMensajes(nuevosMensajes);
     setCargando(true);
@@ -94,45 +82,50 @@ export default function LandingMenuPage() {
       const data = await response.json();
       setMensajes([...nuevosMensajes, { role: 'bot', text: data.respuesta }]);
     } catch (err) {
-      console.error("Error en el flujo de conversación:", err);
+      console.error("Error processing message:", err);
     } finally {
       setCargando(false);
     }
   };
 
-  // PASO 3: Envía los datos del formulario de entrega hacia el endpoint de WhatsApp
   const enviarFormularioAWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
-
     setCargando(true);
 
-    const comanda = Object.entries(cantidades)
+    // CORRECCIÓN: Si no hay cantidades en la interfaz, extraemos el último mensaje de la IA como respaldo de la comanda
+    let comandaTexto = Object.entries(cantidades)
       .filter(([_, qty]) => qty > 0)
-      .map(([name, qty]) => `${qty}x ${name}`);
+      .map(([name, qty]) => `${qty}x ${name}`)
+      .join(', ');
 
-    const kitchenOrderTicket = {
-      "Phone number": phoneNumber,
-      "Name": customerName,
-      "Address": deliveryAddress,
-      "Comanda": comanda.join(', ')
-    };
+    if (!comandaTexto) {
+      const ultimosMensajesBot = mensajes.filter(m => m.role === 'bot');
+      comandaTexto = ultimosMensajesBot.length > 0 
+        ? ultimosMensajesBot[ultimosMensajesBot.length - 1].text.substring(0, 150) + "..." 
+        : "Pedido definido por chat conversacional";
+    }
 
     try {
       const response = await fetch('/api/whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(kitchenOrderTicket)
+        body: JSON.stringify({
+          "Phone number": phoneNumber,
+          "Name": customerName,
+          "Address": deliveryAddress,
+          "Comanda": comandaTexto
+        })
       });
 
       if (response.ok) {
         setOrderSubmitted(true);
-        setMensajes(prev => [...prev, { role: 'bot', text: '¡Excelente! Tu pedido ha sido procesado y enviado directamente al canal de la cocina por WhatsApp.' }]);
+        setMensajes(prev => [...prev, { role: 'bot', text: '¡Excelente! Tu pedido ha sido procesado y enviado directamente a la cocina por WhatsApp.' }]);
       } else {
-        throw new Error("Error en la respuesta del servidor de WhatsApp.");
+        throw new Error("Server communication failure.");
       }
     } catch (err) {
-      console.error("Error al enrutar a WhatsApp:", err);
+      console.error("Routing error:", err);
     } finally {
       setCargando(false);
     }
@@ -142,24 +135,45 @@ export default function LandingMenuPage() {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
   };
 
+  const fontMain = '"Fredoka", sans-serif';
+  const fontSecondary = '"Comic Neue", cursive';
+
   return (
-    <div className="min-h-screen bg-stone-900 text-amber-50 font-sans pb-24 relative">
+    <div className="relative min-h-screen pb-24 selection:bg-[#B03336] selection:text-[#FEFEFE]">
       
-      {/* Banner de Presentación */}
-      <header className="relative bg-neutral-950 text-center py-16 px-4 border-b border-amber-600/20">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000')] opacity-10 bg-cover bg-center"></div>
-        <h1 className="text-4xl font-black text-amber-500 uppercase tracking-wider">Portal ST</h1>
-        <p className="mt-2 text-sm uppercase tracking-widest text-stone-400">Sabores Artesanales a la Parrilla</p>
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@600;700;900&display=swap');
+      `}} />
+
+      <div 
+        className="fixed inset-0 -z-10"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(32, 30, 30, 0.90), rgba(32, 30, 30, 0.94)), url('https://images.unsplash.com/photo-1504198453319-5ce911bafcde?q=80&w=1280')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'repeat-y'
+        }}
+      />
+      
+      <header className="relative text-center py-12 px-4 border-b-4 border-[#B03336] bg-black/20">
+        <h1 style={{ fontFamily: fontMain, fontWeight: 900 }} className="text-5xl md:text-6xl text-[#FEFEFE] uppercase tracking-wide drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)]">
+          PORTAL <span className="text-[#B03336]">STREET</span>
+        </h1>
+        <p style={{ fontFamily: fontSecondary }} className="mt-2.5 text-xs uppercase tracking-widest text-amber-400 font-extrabold bg-black/60 inline-block px-5 py-1.5 rounded-full border border-neutral-800">
+          SABORES ARTESANALES A LA PARRILLA
+        </p>
       </header>
 
-      {/* Navegación por Categorías */}
-      <nav className="relative bg-neutral-950/95 border-b border-stone-850 px-4 py-4 grid grid-cols-1 gap-2 sm:grid-cols-3 max-w-4xl mx-auto w-full">
+      <nav className="relative bg-black/40 backdrop-blur-xs px-4 py-4 grid grid-cols-1 gap-2 sm:grid-cols-3 max-w-4xl mx-auto w-full">
         {Object.keys(MENU_PORTAL).map((cat) => (
           <button 
             key={cat} 
             onClick={() => setCategoriaActiva(cat)} 
-            className={`w-full px-5 py-3 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${
-              categoriaActiva === cat ? 'bg-amber-500 text-neutral-950 shadow-md' : 'bg-stone-800 text-stone-300'
+            style={{ fontFamily: fontMain, fontWeight: 700 }}
+            className={`w-full px-5 py-3 rounded-xl font-bold text-sm tracking-wider transition-all uppercase border-2 ${
+              categoriaActiva === cat 
+                ? 'bg-[#B03336] text-[#FEFEFE] border-[#B03336] shadow-xl transform scale-[1.01]' 
+                : 'bg-[#201E1E]/95 text-[#FEFEFE]/80 border-neutral-800/80 hover:border-[#B03336]'
             }`}
           >
             {cat}
@@ -167,30 +181,35 @@ export default function LandingMenuPage() {
         ))}
       </nav>
 
-      {/* Catálogo de Productos */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2">
           {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
             const cantidadActual = cantidades[plato.nombre] || 0;
             return (
-              <div key={idx} className="bg-neutral-950 rounded-2xl overflow-hidden border border-stone-800/60 flex flex-col justify-between shadow-lg">
-                <div className="h-48 bg-stone-900">
+              <div key={idx} className="bg-[#201E1E]/95 rounded-2xl overflow-hidden border-2 border-neutral-800/60 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:border-[#B03336]/50">
+                <div className="h-48 bg-neutral-900 relative">
                   <img src={plato.imagen} alt={plato.nombre} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-extrabold text-stone-100 uppercase tracking-wide">{plato.nombre}</h3>
-                    <p className="mt-1 text-xs text-stone-400 font-light leading-relaxed">{plato.descripcion}</p>
+                    <h3 style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xl text-[#facc15] uppercase tracking-wide drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">
+                      {plato.nombre}
+                    </h3>
+                    <p style={{ fontFamily: fontSecondary }} className="mt-2 text-xs text-[#FEFEFE]/90 font-normal leading-relaxed">
+                      {plato.descripcion}
+                    </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-stone-900 flex items-center justify-between gap-2">
+                  <div className="mt-5 pt-3 border-t border-neutral-800/60 flex items-center justify-between gap-2">
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-stone-500 uppercase font-bold">Individual</span>
-                      <span className="text-base font-black text-amber-500">{formatCOP(plato.precioIndividual)}</span>
+                      <span className="text-[9px] text-[#FEFEFE]/50 uppercase font-black tracking-wider">Individual</span>
+                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xl text-[#FEFEFE]">
+                        {formatCOP(plato.precioIndividual)}
+                      </span>
                     </div>
-                    <div className="flex items-center bg-stone-900 rounded-xl p-1 border border-stone-800">
-                      <button onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-stone-400 hover:text-amber-500 font-bold">-</button>
-                      <span className="w-8 text-center font-black text-xs text-stone-100">{cantidadActual}</span>
-                      <button onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-stone-400 hover:text-amber-500 font-bold">+</button>
+                    <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
+                      <button onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">-</button>
+                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
+                      <button onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">+</button>
                     </div>
                   </div>
                 </div>
@@ -200,33 +219,34 @@ export default function LandingMenuPage() {
         </div>
       </main>
 
-      {/* Botón Flotante de Compra */}
       <div className="fixed bottom-6 inset-x-4 z-40 text-center">
         <button 
           onClick={iniciarOrdenConIA}
-          className="w-full max-w-md bg-gradient-to-r from-amber-600 to-amber-500 text-neutral-950 font-black py-4 rounded-2xl uppercase text-xs tracking-wider transition-all duration-300 transform hover:brightness-110 hover:scale-[1.02] shadow-xl"
+          style={{ fontFamily: fontMain, fontWeight: 700 }}
+          className="w-full max-w-md bg-[#B03336] text-[#FEFEFE] font-bold py-4 rounded-xl uppercase text-xs tracking-wider transition-all duration-300 transform hover:scale-[1.02] shadow-2xl active:scale-[0.98] border border-amber-500/20"
         >
           🤖 Revisar Pedido
         </button>
       </div>
 
-      {/* MODAL DE CHAT INTERACTIVO */}
       {isChatOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-neutral-900 w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border border-stone-800 flex flex-col justify-between shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-[#201E1E] w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border-2 border-[#B03336]/40 flex flex-col justify-between shadow-2xl overflow-hidden">
             
-            <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-neutral-950">
-              <span className="font-bold text-xs tracking-wider uppercase text-amber-500">Terminal de Cocina</span>
-              <button onClick={() => setIsChatOpen(false)} className="text-stone-400 hover:text-stone-100 text-xs font-bold uppercase bg-stone-800 px-3 py-1 rounded-lg">Cerrar</button>
+            <div className="p-4 border-b border-neutral-850 flex justify-between items-center bg-neutral-950">
+              <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">Terminal de Cocina</span>
+              <button onClick={() => setIsChatOpen(false)} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-[#FEFEFE]/70 hover:text-[#FEFEFE] text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
             </div>
 
-            {/* Ventana de mensajes del chat */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-stone-950/40">
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20">
               {mensajes.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed ${
-                    msg.role === 'user' ? 'bg-amber-500 text-neutral-950 font-semibold' : 'bg-stone-800 text-stone-100 border border-stone-750'
-                  }`}>
+                  <div 
+                    style={{ fontFamily: fontSecondary }}
+                    className={`max-w-[85%] rounded-xl p-3 text-sm leading-relaxed ${
+                      msg.role === 'user' ? 'bg-[#B03336] text-[#FEFEFE] font-bold shadow-md' : 'bg-neutral-900 text-[#FEFEFE] border border-neutral-800'
+                    }`}
+                  >
                     <p className="whitespace-pre-line">{msg.text}</p>
                   </div>
                 </div>
@@ -234,58 +254,59 @@ export default function LandingMenuPage() {
 
               {cargando && (
                 <div className="text-left">
-                  <span className="inline-block bg-stone-800/80 text-stone-400 text-xs px-3 py-1.5 rounded-full animate-pulse">
+                  <span style={{ fontFamily: fontSecondary }} className="inline-block bg-neutral-900 text-[#FEFEFE]/60 text-xs px-3 py-1.5 rounded-full animate-pulse">
                     Procesando detalles del pedido...
                   </span>
                 </div>
               )}
 
-              {/* BOTÓN DE TRANSICIÓN: Aparece en español tras el cálculo de la IA */}
-              {Object.values(cantidades).some(qty => qty > 0) && !isConfirmedByAI && mensajes.length > 1 && !cargando && (
+              {/* CORRECCIÓN INTEGRADA: El botón aparece si hay cantidades O si la conversación ya avanzó (historial mayor a 1 mensaje) */}
+              {(!isConfirmedByAI && (Object.values(cantidades).some(qty => qty > 0) || mensajes.length > 1) && !cargando) && (
                 <div className="text-center pt-2">
                   <button 
                     onClick={() => setIsConfirmedByAI(true)}
-                    className="bg-zinc-100 text-neutral-900 font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-md animate-bounce"
+                    style={{ fontFamily: fontMain, fontWeight: 700 }}
+                    className="bg-[#FEFEFE] text-neutral-950 font-black px-6 py-3 rounded-lg text-xs uppercase tracking-wider hover:bg-neutral-100 shadow-md animate-bounce"
                   >
                     👍 Confirmar Productos y Datos de Envío
                   </button>
                 </div>
               )}
 
-              {/* FORMULARIO HTML DE ENTREGA EN ESPAÑOL */}
               {isConfirmedByAI && !orderSubmitted && (
-                <form onSubmit={enviarFormularioAWhatsApp} className="mt-4 bg-neutral-950 p-4 rounded-xl border border-stone-800 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-amber-500 tracking-wider border-b border-stone-900 pb-2 mb-2">Datos de Entrega</h4>
+                <form onSubmit={enviarFormularioAWhatsApp} className="mt-4 bg-black/45 p-4 rounded-xl border border-neutral-800 space-y-3">
+                  <h4 style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs font-black uppercase text-[#B03336] tracking-wider border-b border-neutral-800 pb-2 mb-2">Datos de Entrega</h4>
                   <div>
-                    <label className="block text-[11px] uppercase font-bold text-stone-400 mb-1">Nombre Completo</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Nombre Completo</label>
                     <input 
                       type="text" required value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Ej. Juan David"
-                      className="w-full bg-stone-900 border border-stone-800 rounded-lg px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500"
+                      placeholder="Ej. Marcela"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] uppercase font-bold text-stone-400 mb-1">Dirección de Envío</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Dirección de Envío</label>
                     <input 
                       type="text" required value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Ej. Calle 10 #14-25"
-                      className="w-full bg-stone-900 border border-stone-800 rounded-lg px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] uppercase font-bold text-stone-400 mb-1">Teléfono Celular</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Teléfono Celular</label>
                     <input 
                       type="tel" required value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="Ej. 3213166885"
-                      className="w-full bg-stone-900 border border-stone-800 rounded-lg px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
                     />
                   </div>
                   <button 
                     type="submit" disabled={cargando}
-                    className="w-full mt-2 bg-amber-500 text-neutral-950 font-black py-2.5 rounded-lg text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors disabled:opacity-50"
+                    style={{ fontFamily: fontMain, fontWeight: 700 }}
+                    className="w-full mt-2 bg-[#B03336] text-[#FEFEFE] font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest hover:bg-[#B03336]/90 transition-colors"
                   >
                     Enviar Pedido a la Cocina
                   </button>
@@ -293,16 +314,15 @@ export default function LandingMenuPage() {
               )}
             </div>
 
-            {/* ENTRADA DE TEXTO PARA EL CHAT CON LA IA */}
             {!isConfirmedByAI && (
-              <form onSubmit={manejarEnvioManual} className="p-3 border-t border-stone-800 bg-neutral-950 flex gap-2">
+              <form onSubmit={manejarEnvioManual} className="p-3 border-t border-neutral-800 bg-neutral-950 flex gap-2">
                 <input 
                   type="text" value={inputUsuario} 
                   onChange={(e) => setInputUsuario(e.target.value)}
-                  placeholder="Escribe a Gemini para modificar o confirmar..." 
-                  className="flex-1 bg-stone-900 border border-stone-800 rounded-xl px-4 py-2.5 text-sm text-stone-100 focus:outline-none focus:border-amber-500 placeholder:text-stone-600"
+                  placeholder="Escribe a Gemini..." 
+                  className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336]"
                 />
-                <button type="submit" className="bg-amber-500 text-neutral-950 font-black px-5 rounded-xl text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors">Chat</button>
+                <button type="submit" style={{ fontFamily: fontMain, fontWeight: 700 }} className="bg-[#B03336] text-[#FEFEFE] font-bold px-5 rounded-xl text-xs uppercase tracking-wider">Chat</button>
               </form>
             )}
 
