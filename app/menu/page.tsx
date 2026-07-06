@@ -58,7 +58,6 @@ export default function LandingMenuPage() {
         setCargando(false);
       }
     } else {
-      // Si la canasta está vacía, iniciamos con el saludo pero permitimos la interacción libre
       setMensajes([{ role: 'bot', text: '¡Hola! Tu canasta está vacía. Selecciona productos del menú o cuéntame directamente por aquí qué te gustaría ordenar.' }]);
     }
   };
@@ -93,7 +92,6 @@ export default function LandingMenuPage() {
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
     setCargando(true);
 
-    // CORRECCIÓN: Si no hay cantidades en la interfaz, extraemos el último mensaje de la IA como respaldo de la comanda
     let comandaTexto = Object.entries(cantidades)
       .filter(([_, qty]) => qty > 0)
       .map(([name, qty]) => `${qty}x ${name}`)
@@ -145,6 +143,7 @@ export default function LandingMenuPage() {
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@600;700;900&display=swap');
       `}} />
 
+      {/* Global Background Layer */}
       <div 
         className="fixed inset-0 -z-10"
         style={{ 
@@ -155,15 +154,24 @@ export default function LandingMenuPage() {
         }}
       />
       
-      <header className="relative text-center py-12 px-4 border-b-4 border-[#B03336] bg-black/20">
-        <h1 style={{ fontFamily: fontMain, fontWeight: 900 }} className="text-5xl md:text-6xl text-[#FEFEFE] uppercase tracking-wide drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)]">
-          PORTAL <span className="text-[#B03336]">STREET</span>
-        </h1>
-        <p style={{ fontFamily: fontSecondary }} className="mt-2.5 text-xs uppercase tracking-widest text-amber-400 font-extrabold bg-black/60 inline-block px-5 py-1.5 rounded-full border border-neutral-800">
-          SABORES ARTESANALES A LA PARRILLA
-        </p>
+      {/* 
+        OPTIMIZED HEADER BANNER:
+        - Changed background to solid pure black (bg-black) matching image_717b43.png.
+        - Centered the layout container completely via flexbox utilities.
+      */}
+      <header className="relative w-full py-12 px-4 bg-black border-b-4 border-[#B03336] flex items-center justify-center">
+        {/* Enlarged image tracking container */}
+        <div className="relative max-w-sm transition-transform duration-350 hover:scale-102">
+          <img 
+            src="/images/Logo-Portal.png" 
+            alt="Portal Street Brand Logo"
+            /* Increased dimensions from h-32/h-40 to h-44/h-56 for a bigger, punchier look */
+            className="h-44 md:h-56 w-auto object-contain"
+          />
+        </div>
       </header>
 
+      {/* Navigation Selection Layer */}
       <nav className="relative bg-black/40 backdrop-blur-xs px-4 py-4 grid grid-cols-1 gap-2 sm:grid-cols-3 max-w-4xl mx-auto w-full">
         {Object.keys(MENU_PORTAL).map((cat) => (
           <button 
@@ -181,6 +189,7 @@ export default function LandingMenuPage() {
         ))}
       </nav>
 
+      {/* Main Catalog View */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2">
           {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
@@ -219,6 +228,7 @@ export default function LandingMenuPage() {
         </div>
       </main>
 
+      {/* Floating Review CTA */}
       <div className="fixed bottom-6 inset-x-4 z-40 text-center">
         <button 
           onClick={iniciarOrdenConIA}
@@ -229,6 +239,7 @@ export default function LandingMenuPage() {
         </button>
       </div>
 
+      {/* Terminal Modal System */}
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-[#201E1E] w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border-2 border-[#B03336]/40 flex flex-col justify-between shadow-2xl overflow-hidden">
@@ -260,7 +271,6 @@ export default function LandingMenuPage() {
                 </div>
               )}
 
-              {/* CORRECCIÓN INTEGRADA: El botón aparece si hay cantidades O si la conversación ya avanzó (historial mayor a 1 mensaje) */}
               {(!isConfirmedByAI && (Object.values(cantidades).some(qty => qty > 0) || mensajes.length > 1) && !cargando) && (
                 <div className="text-center pt-2">
                   <button 
