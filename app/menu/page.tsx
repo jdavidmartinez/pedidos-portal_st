@@ -137,6 +137,7 @@ export default function LandingMenuPage() {
   const fontSecondary = '"Comic Neue", cursive';
 
   return (
+    /* Global user text selection matching brand red #B03336 */
     <div className="relative min-h-screen pb-24 selection:bg-[#B03336] selection:text-[#FEFEFE]">
       
       <style dangerouslySetInnerHTML={{__html: `
@@ -154,18 +155,12 @@ export default function LandingMenuPage() {
         }}
       />
       
-      {/* 
-        OPTIMIZED HEADER BANNER:
-        - Changed background to solid pure black (bg-black) matching image_717b43.png.
-        - Centered the layout container completely via flexbox utilities.
-      */}
+      {/* SOLID BLACK HEADER BANNER - Underlined with exact brand red #B03336 */}
       <header className="relative w-full py-12 px-4 bg-black border-b-4 border-[#B03336] flex items-center justify-center">
-        {/* Enlarged image tracking container */}
         <div className="relative max-w-sm transition-transform duration-350 hover:scale-102">
           <img 
             src="/images/Logo-Portal.png" 
             alt="Portal Street Brand Logo"
-            /* Increased dimensions from h-32/h-40 to h-44/h-56 for a bigger, punchier look */
             className="h-44 md:h-56 w-auto object-contain"
           />
         </div>
@@ -178,6 +173,9 @@ export default function LandingMenuPage() {
             key={cat} 
             onClick={() => setCategoriaActiva(cat)} 
             style={{ fontFamily: fontMain, fontWeight: 700 }}
+            /* COLOR CORRECTION: Active state background and custom border set explicitly 
+              to hex color #B03336 to lock down a single visual language across the layout.
+            */
             className={`w-full px-5 py-3 rounded-xl font-bold text-sm tracking-wider transition-all uppercase border-2 ${
               categoriaActiva === cat 
                 ? 'bg-[#B03336] text-[#FEFEFE] border-[#B03336] shadow-xl transform scale-[1.01]' 
@@ -195,6 +193,7 @@ export default function LandingMenuPage() {
           {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
             const cantidadActual = cantidades[plato.nombre] || 0;
             return (
+              /* Hover cards border line highlighted with brand red #B03336 */
               <div key={idx} className="bg-[#201E1E]/95 rounded-2xl overflow-hidden border-2 border-neutral-800/60 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:border-[#B03336]/50">
                 <div className="h-48 bg-neutral-900 relative">
                   <img src={plato.imagen} alt={plato.nombre} className="w-full h-full object-cover" />
@@ -216,6 +215,7 @@ export default function LandingMenuPage() {
                       </span>
                     </div>
                     <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
+                      {/* Counter interface colors adjusted to hover on brand red #B03336 */}
                       <button onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">-</button>
                       <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
                       <button onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">+</button>
@@ -228,12 +228,12 @@ export default function LandingMenuPage() {
         </div>
       </main>
 
-      {/* Floating Review CTA */}
+      {/* Floating Review CTA - Background explicitly configured to exact brand red hex #B03336 */}
       <div className="fixed bottom-6 inset-x-4 z-40 text-center">
         <button 
           onClick={iniciarOrdenConIA}
-          style={{ fontFamily: fontMain, fontWeight: 700 }}
-          className="w-full max-w-md bg-[#B03336] text-[#FEFEFE] font-bold py-4 rounded-xl uppercase text-xs tracking-wider transition-all duration-300 transform hover:scale-[1.02] shadow-2xl active:scale-[0.98] border border-amber-500/20"
+          style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}
+          className="w-full max-w-md text-[#FEFEFE] font-bold py-4 rounded-xl uppercase text-xs tracking-wider transition-all duration-300 transform hover:scale-[1.02] shadow-2xl active:scale-[0.98] border border-amber-500/20"
         >
           🤖 Revisar Pedido
         </button>
@@ -242,6 +242,7 @@ export default function LandingMenuPage() {
       {/* Terminal Modal System */}
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          {/* Modal layout framing accented using #B03336 */}
           <div className="bg-[#201E1E] w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border-2 border-[#B03336]/40 flex flex-col justify-between shadow-2xl overflow-hidden">
             
             <div className="p-4 border-b border-neutral-850 flex justify-between items-center bg-neutral-950">
@@ -254,6 +255,7 @@ export default function LandingMenuPage() {
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div 
                     style={{ fontFamily: fontSecondary }}
+                    /* Outgoing user dialogue box adjusted to brand red #B03336 */
                     className={`max-w-[85%] rounded-xl p-3 text-sm leading-relaxed ${
                       msg.role === 'user' ? 'bg-[#B03336] text-[#FEFEFE] font-bold shadow-md' : 'bg-neutral-900 text-[#FEFEFE] border border-neutral-800'
                     }`}
@@ -315,8 +317,8 @@ export default function LandingMenuPage() {
                   </div>
                   <button 
                     type="submit" disabled={cargando}
-                    style={{ fontFamily: fontMain, fontWeight: 700 }}
-                    className="w-full mt-2 bg-[#B03336] text-[#FEFEFE] font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest hover:bg-[#B03336]/90 transition-colors"
+                    style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}
+                    className="w-full mt-2 text-[#FEFEFE] font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest hover:opacity-90 transition-opacity"
                   >
                     Enviar Pedido a la Cocina
                   </button>
@@ -332,7 +334,7 @@ export default function LandingMenuPage() {
                   placeholder="Escribe a Gemini..." 
                   className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336]"
                 />
-                <button type="submit" style={{ fontFamily: fontMain, fontWeight: 700 }} className="bg-[#B03336] text-[#FEFEFE] font-bold px-5 rounded-xl text-xs uppercase tracking-wider">Chat</button>
+                <button type="submit" style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }} className="text-[#FEFEFE] font-bold px-5 rounded-xl text-xs uppercase tracking-wider">Chat</button>
               </form>
             )}
 
