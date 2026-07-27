@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "_IGNORE_PORTAL_PEDIDOS_SESSION*/**",
+    "logs/**",
+    "*.data.json",
   ]),
 ]);
 

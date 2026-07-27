@@ -3,6 +3,11 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { menuData } from '../../../data/menu'; // Leemos tu menú local
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 // Definimos el esquema estricto que la IA DEBE devolver obligatoriamente
 const orderResponseSchema = z.object({
     // 1. Le damos una estructura clara al esquema para que Gemini sepa CÓMO llenar el JSON
@@ -20,11 +25,22 @@ const orderResponseSchema = z.object({
   
   export async function POST(req: Request) {
     try {
-      const { messageHistory } = await req.json();
+      const payload = await req.json() as { messageHistory?: unknown };
+      const messageHistory = Array.isArray(payload.messageHistory)
+        ? payload.messageHistory.filter(
+            (message): message is ConversationMessage =>
+              typeof message === 'object' &&
+              message !== null &&
+              ('role' in message) &&
+              (message.role === 'user' || message.role === 'assistant') &&
+              ('content' in message) &&
+              typeof message.content === 'string'
+          )
+        : [];
   
       // 2. CREAMOS LA MEMORIA: Construimos el historial completo para pasárselo a la IA
       const conversationHistory = messageHistory
-        .map((msg: any) => `${msg.role === 'user' ? 'Cliente' : 'Asistente'}: ${msg.content}`)
+        .map((msg) => `${msg.role === 'user' ? 'Cliente' : 'Asistente'}: ${msg.content}`)
         .join('\n');
   
       const result = await generateObject({

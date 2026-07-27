@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { MENU_PORTAL, Producto } from './data';
+import type { Order } from '@/types/order';
 
 interface Mensaje {
   role: 'user' | 'bot';
@@ -21,6 +22,7 @@ export default function LandingMenuPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const cambiarCantidad = (nombre: string, incremento: number) => {
     setCantidades(prev => ({
@@ -33,9 +35,10 @@ export default function LandingMenuPage() {
     setIsChatOpen(true);
     setIsConfirmedByAI(false);
     setOrderSubmitted(false);
+    setSubmitError('');
     
     const seleccionados = Object.entries(cantidades)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([, qty]) => qty > 0)
       .map(([name, qty]) => `${qty}x ${name}`);
 
     if (seleccionados.length > 0) {
@@ -87,43 +90,54 @@ export default function LandingMenuPage() {
     }
   };
 
-  const enviarFormularioAWhatsApp = async (e: React.FormEvent) => {
+  const enviarFormularioACocina = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
-    setCargando(true);
 
-    let comandaTexto = Object.entries(cantidades)
-      .filter(([_, qty]) => qty > 0)
-      .map(([name, qty]) => `${qty}x ${name}`)
-      .join(', ');
+    const items = Object.entries(cantidades)
+      .filter(([, qty]) => qty > 0)
+      .map(([name, quantity]) => ({ name, quantity }));
 
-    if (!comandaTexto) {
-      const ultimosMensajesBot = mensajes.filter(m => m.role === 'bot');
-      comandaTexto = ultimosMensajesBot.length > 0 
-        ? ultimosMensajesBot[ultimosMensajesBot.length - 1].text.substring(0, 150) + "..." 
-        : "Pedido definido por chat conversacional";
+    if (items.length === 0) {
+      setSubmitError('Selecciona al menos un producto del menú antes de enviar el pedido.');
+      return;
     }
 
+    setCargando(true);
+    setSubmitError('');
+
     try {
-      const response = await fetch('/api/whatsapp', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          "Phone number": phoneNumber,
-          "Name": customerName,
-          "Address": deliveryAddress,
-          "Comanda": comandaTexto
+          customer: {
+            name: customerName,
+            address: deliveryAddress,
+            phone: phoneNumber,
+          },
+          items,
         })
       });
+      const data = await response.json() as { order?: Order; error?: string };
 
-      if (response.ok) {
+      if (response.ok && data.order) {
+        const createdOrder = data.order;
         setOrderSubmitted(true);
-        setMensajes(prev => [...prev, { role: 'bot', text: '¡Excelente! Tu pedido ha sido procesado y enviado directamente a la cocina por WhatsApp.' }]);
+        setMensajes(prev => [
+          ...prev,
+          {
+            role: 'bot',
+            text: `¡Excelente! Tu pedido #${String(createdOrder.number).padStart(4, '0')} fue recibido por la cocina.`,
+          },
+        ]);
       } else {
-        throw new Error("Server communication failure.");
+        throw new Error(data.error || 'No fue posible enviar el pedido a la cocina.');
       }
     } catch (err) {
-      console.error("Routing error:", err);
+      const message = err instanceof Error ? err.message : 'No fue posible enviar el pedido.';
+      setSubmitError(message);
+      console.error("Order routing error:", err);
     } finally {
       setCargando(false);
     }
@@ -286,7 +300,7 @@ export default function LandingMenuPage() {
               )}
 
               {isConfirmedByAI && !orderSubmitted && (
-                <form onSubmit={enviarFormularioAWhatsApp} className="mt-4 bg-black/45 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <form onSubmit={enviarFormularioACocina} className="mt-4 bg-black/45 p-4 rounded-xl border border-neutral-800 space-y-3">
                   <h4 style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs font-black uppercase text-[#B03336] tracking-wider border-b border-neutral-800 pb-2 mb-2">Datos de Entrega</h4>
                   <div>
                     <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Nombre Completo</label>
@@ -322,6 +336,15 @@ export default function LandingMenuPage() {
                   >
                     Enviar Pedido a la Cocina
                   </button>
+                  {submitError && (
+                    <p
+                      role="alert"
+                      style={{ fontFamily: fontSecondary }}
+                      className="text-xs text-red-300"
+                    >
+                      {submitError}
+                    </p>
+                  )}
                 </form>
               )}
             </div>

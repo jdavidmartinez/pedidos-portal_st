@@ -1,5 +1,18 @@
 import { NextResponse } from 'next/server';
 
+interface MenuMessage {
+  role: 'user' | 'bot';
+  text: string;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
+}
+
 const CONTEXTO_MENU = `
 MENU PORTAL ST:
 - HAMBURGUESA PORTAL: Individual $18,000 COP, Combo $27,800 COP.
@@ -12,7 +25,23 @@ MENU PORTAL ST:
 
 export async function POST(request: Request) {
   try {
-    const { mensajeUsuario, historial } = await request.json();
+    const payload = await request.json() as {
+      mensajeUsuario?: unknown;
+      historial?: unknown;
+    };
+    const mensajeUsuario =
+      typeof payload.mensajeUsuario === 'string' ? payload.mensajeUsuario : '';
+    const historial = Array.isArray(payload.historial)
+      ? payload.historial.filter(
+          (message): message is MenuMessage =>
+            typeof message === 'object' &&
+            message !== null &&
+            ('role' in message) &&
+            (message.role === 'user' || message.role === 'bot') &&
+            ('text' in message) &&
+            typeof message.text === 'string'
+        )
+      : [];
     const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     if (!GEMINI_API_KEY) {
@@ -31,7 +60,7 @@ export async function POST(request: Request) {
     // Estructuración del payload para la API de Gemini
     const contents = [
       { parts: [{ text: systemInstruction }] },
-      ...historial.map((msg: any) => ({
+      ...historial.map((msg) => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
       })),
@@ -46,13 +75,14 @@ export async function POST(request: Request) {
       body: JSON.stringify({ contents })
     });
 
-    const data = await response.json();
+    const data = await response.json() as GeminiResponse;
     const respuestaIA = data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, experimenté un inconveniente al procesar la solicitud.";
 
     return NextResponse.json({ respuesta: respuestaIA });
 
-  } catch (error: any) {
-    console.error("❌ Error en la ruta de la API:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error desconocido.";
+    console.error("❌ Error en la ruta de la API:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

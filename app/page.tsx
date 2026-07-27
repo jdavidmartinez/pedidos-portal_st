@@ -7,11 +7,21 @@ interface ChatMessage {
   content: string;
 }
 
+interface LiveOrder {
+  items: Array<{
+    name: string;
+    quantity: number;
+    isCombo: boolean;
+    beverage?: string;
+  }>;
+  isOrderComplete: boolean;
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [liveOrder, setLiveOrder] = useState<any>(null);
+  const [liveOrder, setLiveOrder] = useState<LiveOrder | null>(null);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +71,7 @@ export default function Home() {
         {/* Zona de Mensajes */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
           {messages.length === 0 && (
-            <p className="text-center text-zinc-500 text-sm mt-10">Escribe algo como: "Hola, quiero un combo de hamburguesa portal"</p>
+            <p className="text-center text-zinc-500 text-sm mt-10">Escribe algo como: &quot;Hola, quiero un combo de hamburguesa portal&quot;</p>
           )}
           {messages.map((msg, i) => (
             <div
