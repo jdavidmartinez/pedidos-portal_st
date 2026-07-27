@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local OpenWA session and diagnostic artifacts
+/PORTAL_PEDIDOS_SESSION.data.json
+/_IGNORE_PORTAL_PEDIDOS_SESSION*/
+/logs/
