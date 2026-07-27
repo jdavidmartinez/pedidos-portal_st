@@ -9,9 +9,9 @@ final con el cliente.
 ## Recorrido
 
 ```text
-/menu
+  /menu
   → POST /api/orders
-  → OrderRepository
+  → PostgreSQL (Neon)
   → GET /api/orders
   → /cocina
   → enlace wa.me del cliente
@@ -70,32 +70,30 @@ El mensaje incluye número de orden, productos, subtotal, domicilio, total y la
 pregunta de confirmación. Una persona debe revisar y enviar el mensaje desde
 WhatsApp.
 
-## Almacenamiento temporal
+## Almacenamiento
 
 `OrderRepository` desacopla las APIs del almacenamiento.
-`InMemoryOrderRepository` usa un objeto de `globalThis` para conservar las
-órdenes durante recargas de módulos en desarrollo.
+`PostgresOrderRepository` persiste las órdenes y productos en Neon mediante el
+driver oficial `@neondatabase/serverless`.
 
-Limitaciones:
+La migración inicial está en `db/migrations/0001_orders.sql` y se aplica con:
 
-- los datos se pierden al reiniciar Next.js;
-- la numeración vuelve a comenzar;
-- varias instancias no comparten órdenes;
-- no ofrece garantías para Vercel;
-- no existe auditoría ni recuperación.
+```bash
+npm run db:migrate
+```
+
+La variable `DATABASE_URL` debe existir en `.env.local` para desarrollo y en
+las variables de entorno de Vercel para cada ambiente.
 
 ## Migración futura a base de datos
 
-La implementación durable debe conservar la interfaz de repositorio y añadir:
+La implementación actual ya usa una base de datos durable. Para una operación
+real todavía debe añadirse:
 
-1. transacciones para asignar consecutivos;
-2. restricciones para las transiciones de estado;
-3. persistencia de fechas y costo de domicilio;
-4. índices por estado y fecha de recepción;
-5. historial de cambios;
-6. autenticación y autorización de la terminal de cocina;
-7. política de retención para teléfono y dirección;
-8. actualizaciones en tiempo real o polling respaldado por almacenamiento
+1. historial de cambios de estado;
+2. autenticación y autorización de la terminal de cocina;
+3. política de retención para teléfono y dirección;
+4. actualizaciones en tiempo real o polling respaldado por almacenamiento
    compartido.
 
-Hasta completar esa migración, el flujo solo debe considerarse un MVP local.
+Hasta completar esos controles, el flujo debe considerarse un MVP.

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate-db.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -10,6 +11,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
+    "@neondatabase/serverless": "^1.1.0",
     "ai": "^6.0.198",
     "next": "16.2.7",
     "react": "19.2.4",

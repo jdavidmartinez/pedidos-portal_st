@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   InvalidOrderTransitionError,
   OrderNotFoundError,
@@ -18,7 +19,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const payload = updateOrderSchema.parse(await request.json());
-    const order = orderRepository.update(id, payload);
+    const order = await orderRepository.update(id, payload);
     return Response.json({ order }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -39,6 +40,13 @@ export async function PATCH(
       return Response.json(
         { error: error.message },
         { status: 409, headers: noStoreHeaders }
+      );
+    }
+
+    if (error instanceof DatabaseNotConfiguredError) {
+      return Response.json(
+        { error: error.message },
+        { status: 503, headers: noStoreHeaders }
       );
     }
 

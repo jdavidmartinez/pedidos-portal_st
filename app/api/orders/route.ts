@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   InvalidCustomerPhoneError,
   InvalidOrderItemError,
@@ -12,16 +13,31 @@ export const runtime = "nodejs";
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
 export async function GET() {
-  return Response.json(
-    { orders: orderRepository.list() },
-    { headers: noStoreHeaders }
-  );
+  try {
+    return Response.json(
+      { orders: await orderRepository.list() },
+      { headers: noStoreHeaders }
+    );
+  } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
+      return Response.json(
+        { error: error.message },
+        { status: 503, headers: noStoreHeaders }
+      );
+    }
+
+    console.error("[orders] No fue posible consultar las órdenes:", error);
+    return Response.json(
+      { error: "No fue posible consultar las órdenes." },
+      { status: 500, headers: noStoreHeaders }
+    );
+  }
 }
 
 export async function POST(request: Request) {
   try {
     const payload = createOrderSchema.parse(await request.json());
-    const order = orderRepository.create(payload);
+    const order = await orderRepository.create(payload);
     return Response.json({ order }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -38,6 +54,13 @@ export async function POST(request: Request) {
       return Response.json(
         { error: error.message },
         { status: 400, headers: noStoreHeaders }
+      );
+    }
+
+    if (error instanceof DatabaseNotConfiguredError) {
+      return Response.json(
+        { error: error.message },
+        { status: 503, headers: noStoreHeaders }
       );
     }
 

@@ -397,7 +397,10 @@ export default function KitchenPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0b0b0b] text-white selection:bg-[#B03336]">
+    <main
+      className="min-h-screen text-white selection:bg-[#B03336]"
+      style={{ backgroundColor: "#0b0b0b" }}
+    >
       <header className="border-b border-[#B03336]/60 bg-black px-4 py-4">
         <div className="mx-auto flex w-full max-w-[1920px] flex-wrap items-end justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -406,6 +409,7 @@ export default function KitchenPage() {
               width={64}
               height={64}
               alt="Logo de Portal ST"
+              loading="eager"
               className="h-16 w-16 rounded-full object-cover"
             />
             <div>
@@ -442,11 +446,23 @@ export default function KitchenPage() {
         )}
 
         {loading ? (
-          <p className="py-20 text-center text-white/50">
-            Consultando órdenes...
-          </p>
+          <section
+            className="rounded-2xl border px-6 py-20 text-center"
+            style={{
+              backgroundColor: "#171717",
+              borderColor: "#3f3f46",
+            }}
+          >
+            <p className="text-white/60">Consultando órdenes...</p>
+          </section>
         ) : orders.length === 0 ? (
-          <section className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-20 text-center">
+          <section
+            className="rounded-2xl border border-dashed px-6 py-20 text-center"
+            style={{
+              backgroundColor: "#171717",
+              borderColor: "#52525b",
+            }}
+          >
             <p className="text-xl font-black uppercase text-white/70">
               Aún no hay órdenes
             </p>
