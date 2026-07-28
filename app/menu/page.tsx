@@ -14,6 +14,7 @@ export default function LandingMenuPage() {
   const [categoriaActiva, setCategoriaActiva] = useState<string>(Object.keys(MENU_PORTAL)[0]);
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isGeminiMode, setIsGeminiMode] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [inputUsuario, setInputUsuario] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -71,11 +72,23 @@ export default function LandingMenuPage() {
       setIsConfirmedByAI(false);
       setOrderSubmitted(false);
       setSubmitError('');
+      setIsGeminiMode(false);
     }
+  };
+
+  const abrirFormularioPedido = () => {
+    setIsChatOpen(true);
+    setIsGeminiMode(false);
+    setIsConfirmedByAI(true);
+    setOrderSubmitted(false);
+    setSubmitError('');
+    setMensajes([]);
+    setInputUsuario('');
   };
 
   const iniciarOrdenConIA = async () => {
     setIsChatOpen(true);
+    setIsGeminiMode(true);
     setIsConfirmedByAI(false);
     setOrderSubmitted(false);
     setSubmitError('');
@@ -259,17 +272,24 @@ export default function LandingMenuPage() {
             <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">
               {cantidadTotal === 0 ? 'Tu pedido está vacío' : `${cantidadTotal} ${cantidadTotal === 1 ? 'producto' : 'productos'} en tu pedido`}
             </p>
-            <p style={{ fontFamily: fontSecondary }} className="text-sm text-[#FEFEFE]/65">
+            <p style={{ fontFamily: fontSecondary }} className="text-sm font-medium text-white">
               {cantidadTotal === 0 ? 'Selecciona productos para comenzar' : `Subtotal ${formatCOP(subtotal)}`}
             </p>
           </div>
           <button
-            onClick={iniciarOrdenConIA}
+            onClick={abrirFormularioPedido}
             disabled={cantidadTotal === 0}
             style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: cantidadTotal === 0 ? '#525252' : '#B03336' }}
             className="shrink-0 rounded-xl border border-amber-500/20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#FEFEFE] shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:text-[#FEFEFE]/45 disabled:hover:scale-100 sm:px-6"
           >
-            {cantidadTotal === 0 ? 'Selecciona productos' : 'Revisar pedido'}
+            {cantidadTotal === 0 ? 'Selecciona productos' : 'Continuar con el pedido'}
+          </button>
+          <button
+            type="button"
+            onClick={iniciarOrdenConIA}
+            className="basis-full rounded-lg border border-white/20 bg-neutral-900 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition hover:border-[#B03336] hover:bg-[#B03336]/20 sm:basis-auto"
+          >
+            🤖 ¿Necesitas ayuda? Hablar con Gemini
           </button>
         </div>
       </section>
@@ -295,16 +315,16 @@ export default function LandingMenuPage() {
                   </div>
                   <div className="mt-5 pt-3 border-t border-neutral-800/60 flex items-center justify-between gap-2">
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-[#FEFEFE]/50 uppercase font-black tracking-wider">Individual</span>
+                      <span className="text-[9px] text-white/65 uppercase font-black tracking-wider">Individual</span>
                       <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xl text-[#FEFEFE]">
                         {formatCOP(plato.precioIndividual)}
                       </span>
                     </div>
                     <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
                       {/* Counter interface colors adjusted to hover on brand red #B03336 */}
-                      <button aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">-</button>
+                      <button aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="h-8 w-8 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
                       <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
-                      <button aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">+</button>
+                      <button aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="h-8 w-8 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">+</button>
                     </div>
                   </div>
                 </div>
@@ -321,8 +341,10 @@ export default function LandingMenuPage() {
           <div className="bg-[#201E1E] w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border-2 border-[#B03336]/40 flex flex-col justify-between shadow-2xl overflow-hidden">
             
             <div className="p-4 border-b border-neutral-850 flex justify-between items-center bg-neutral-950">
-              <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">Terminal de Cocina</span>
-              <button onClick={cerrarChat} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-[#FEFEFE]/70 hover:text-[#FEFEFE] text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
+              <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">
+                {orderSubmitted ? 'Pedido recibido' : isGeminiMode ? 'Asistente Gemini' : 'Confirmar pedido'}
+              </span>
+              <button onClick={cerrarChat} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-white hover:text-white text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20">
@@ -342,7 +364,7 @@ export default function LandingMenuPage() {
 
               {cargando && (
                 <div className="text-left">
-                  <span style={{ fontFamily: fontSecondary }} className="inline-block bg-neutral-900 text-[#FEFEFE]/60 text-xs px-3 py-1.5 rounded-full animate-pulse">
+                  <span style={{ fontFamily: fontSecondary }} className="inline-block bg-neutral-900 text-white text-xs px-3 py-1.5 rounded-full animate-pulse">
                     Procesando detalles del pedido...
                   </span>
                 </div>
@@ -368,7 +390,7 @@ export default function LandingMenuPage() {
                       <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">Resumen del pedido</p>
                       <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(subtotal)}</span>
                     </div>
-                    <ul className="space-y-1 text-xs text-[#FEFEFE]/75">
+                    <ul className="space-y-1 text-xs font-medium text-white">
                       {itemsSeleccionados.map((item) => (
                         <li key={item.name} className="flex justify-between gap-3">
                           <span>{item.quantity}x {item.name}</span>
@@ -376,38 +398,38 @@ export default function LandingMenuPage() {
                         </li>
                       ))}
                     </ul>
-                    <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-[#FEFEFE]/45">El domicilio se confirma por separado con el restaurante.</p>
+                    <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-white">El domicilio se confirma por separado con el restaurante.</p>
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Nombre Completo</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Nombre Completo</label>
                     <input 
                       type="text" required value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Ej. Marcela"
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Dirección de Envío</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Dirección de Envío</label>
                     <input 
                       type="text" required value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Ej. Calle 10 #14-25"
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Teléfono Celular</label>
+                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Teléfono Celular</label>
                     <input 
                       type="tel" required value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="Ej. 3213166885"
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
                   </div>
                   <div>
-                    <label htmlFor="order-observations" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">
-                      Observaciones <span className="normal-case font-normal text-[#FEFEFE]/40">(opcional)</span>
+                    <label htmlFor="order-observations" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">
+                      Observaciones <span className="normal-case font-normal text-white">(opcional)</span>
                     </label>
                     <textarea
                       id="order-observations"
@@ -416,9 +438,9 @@ export default function LandingMenuPage() {
                       maxLength={500}
                       rows={3}
                       placeholder="Ej. Sin cebolla, llamar al llegar..."
-                      className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-[#FEFEFE] outline-none focus:border-[#B03336] placeholder:text-neutral-700"
+                      className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
-                    <p className="mt-1 text-right text-[10px] text-[#FEFEFE]/35">{observations.length}/500</p>
+                    <p className="mt-1 text-right text-[10px] text-white">{observations.length}/500</p>
                   </div>
                   <button 
                     type="submit" disabled={cargando}

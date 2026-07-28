@@ -6,6 +6,10 @@ El pedido debe llegar desde `/menu` hasta `/cocina` sin depender de WhatsApp.
 WhatsApp es únicamente una acción manual para confirmar el pedido y el costo
 final con el cliente.
 
+Gemini está disponible como asistente opcional para resolver dudas o ayudar a
+revisar la selección. El flujo directo del carrito no llama a Gemini y es la
+ruta principal para confirmar y enviar la orden.
+
 ## Recorrido
 
 ```text
@@ -70,6 +74,10 @@ https://wa.me/<telefono>?text=<mensaje-codificado>
 El mensaje incluye número de orden, productos, subtotal, domicilio, total,
 observaciones (si existen) y la pregunta de confirmación. Una persona debe
 revisar y enviar el mensaje desde WhatsApp.
+
+`/cocina` mantiene disponible el botón de envío aunque el domicilio no esté
+definido. En ese caso el mensaje usa `costo domicilio sin definir` y un total
+pendiente de ese valor.
 
 ## Almacenamiento
 

@@ -18,10 +18,10 @@ export function buildOrderWhatsAppMessage(
     )
     .join("\n");
   const deliveryLine =
-    deliveryFee === null ? "Por confirmar" : formatCOP(deliveryFee);
+    deliveryFee === null ? "costo domicilio sin definir" : formatCOP(deliveryFee);
   const totalLine =
     deliveryFee === null
-      ? "Pendiente del domicilio"
+      ? "Pendiente del costo de domicilio"
       : formatCOP(order.subtotal + deliveryFee);
 
   return [
@@ -47,5 +47,5 @@ export function buildOrderWhatsAppUrl(
   deliveryFee: number | null
 ) {
   const message = buildOrderWhatsAppMessage(order, deliveryFee);
-  return `https://wa.me/${order.customer.phone}?text=${encodeURIComponent(message)}`;
+  return `whatsapp://send?phone=${order.customer.phone}&text=${encodeURIComponent(message)}`;
 }
