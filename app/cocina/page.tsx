@@ -366,11 +366,50 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [authState, setAuthState] = useState<
+    "checking" | "authenticated" | "unauthenticated"
+  >("checking");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(() => Date.now());
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    void fetch("/api/auth/session", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          authenticated?: boolean;
+          error?: string;
+        };
+
+        if (!active) return;
+
+        if (!response.ok) {
+          setError(payload.error || "No fue posible validar la sesión.");
+          setAuthState("unauthenticated");
+          return;
+        }
+
+        if (!payload.authenticated) {
+          window.location.replace("/cocina/login");
+          return;
+        }
+
+        setAuthState("authenticated");
+      })
+      .catch(() => {
+        if (!active) return;
+        setError("No fue posible validar la sesión.");
+        setAuthState("unauthenticated");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -379,6 +418,11 @@ export default function KitchenPage() {
         orders?: Order[];
         error?: string;
       };
+
+      if (response.status === 401) {
+        window.location.replace("/cocina/login");
+        return;
+      }
 
       if (!response.ok || !payload.orders) {
         throw new Error(payload.error || "No fue posible consultar las órdenes.");
@@ -399,13 +443,15 @@ export default function KitchenPage() {
   }, []);
 
   useEffect(() => {
+    if (authState !== "authenticated") return;
+
     const initialLoad = window.setTimeout(() => void loadOrders(), 0);
     const polling = window.setInterval(() => void loadOrders(), 4000);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(polling);
     };
-  }, [loadOrders]);
+  }, [authState, loadOrders]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -424,6 +470,11 @@ export default function KitchenPage() {
         order?: Order;
         error?: string;
       };
+
+      if (response.status === 401) {
+        window.location.replace("/cocina/login");
+        return;
+      }
 
       if (!response.ok || !payload.order) {
         throw new Error(payload.error || "No fue posible actualizar la orden.");
@@ -447,6 +498,23 @@ export default function KitchenPage() {
       });
     }
   };
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.replace("/cocina/login");
+  }
+
+  if (authState !== "authenticated") {
+    return (
+      <main
+        className="flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 text-white"
+      >
+        <p className="text-sm text-white/60">
+          {authState === "checking" ? "Validando acceso..." : error}
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -476,13 +544,22 @@ export default function KitchenPage() {
               </p>
             </div>
           </div>
-          <div className="text-right text-xs text-white/45">
-            <p>{orders.length} órdenes en esta sesión</p>
-            <p className="mt-1">
-              {lastUpdatedAt
-                ? `Actualizado ${lastUpdatedAt.toLocaleTimeString("es-CO")}`
-                : "Esperando actualización"}
-            </p>
+          <div className="flex items-end gap-4 text-right text-xs text-white/45">
+            <div>
+              <p>{orders.length} órdenes en esta sesión</p>
+              <p className="mt-1">
+                {lastUpdatedAt
+                  ? `Actualizado ${lastUpdatedAt.toLocaleTimeString("es-CO")}`
+                  : "Esperando actualización"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="rounded-lg border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:border-red-300 hover:text-red-200"
+            >
+              Cerrar sesión
+            </button>
           </div>
         </div>
       </header>

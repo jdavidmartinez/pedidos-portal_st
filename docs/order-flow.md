@@ -18,7 +18,7 @@ ruta principal para confirmar y enviar la orden.
   → PostgreSQL (Neon)
   → GET /api/orders
   → /cocina
-  → enlace wa.me del cliente
+  → enlace whatsapp:// del cliente
 ```
 
 ## Contrato
@@ -58,17 +58,26 @@ la orden es despachada o rechazada.
 | `POST` | `/api/orders` | Valida y crea una orden. |
 | `PATCH` | `/api/orders/[id]` | Actualiza estado o costo de domicilio. |
 
-Las respuestas usan `Cache-Control: no-store`.
+Las respuestas usan `Cache-Control: no-store`. `GET /api/orders` y `PATCH
+/api/orders/[id]` requieren la sesión autenticada de cocina; `POST /api/orders`
+permanece público para los clientes.
+
+## Autenticación de cocina
+
+`/cocina/login` crea una sesión firmada en una cookie `httpOnly` con duración de
+12 horas. La primera versión usa temporalmente las credenciales `cocina` /
+`portalst` hardcodeadas en el servidor. `AUTH_SECRET` sigue configurándose como
+variable de entorno para firmar la sesión.
 
 ## Contacto por WhatsApp
 
 El teléfono colombiano de diez dígitos se normaliza agregando el prefijo `57`.
 También se aceptan números internacionales que ya incluyan su código de país.
 
-`/cocina` genera:
+`/cocina` genera un enlace directo para WhatsApp Desktop:
 
 ```text
-https://wa.me/<telefono>?text=<mensaje-codificado>
+whatsapp://send?phone=<telefono>&text=<mensaje-codificado>
 ```
 
 El mensaje incluye número de orden, productos, subtotal, domicilio, total,
@@ -100,7 +109,7 @@ La implementación actual ya usa una base de datos durable. Para una operación
 real todavía debe añadirse:
 
 1. historial de cambios de estado;
-2. autenticación y autorización de la terminal de cocina;
+2. usuarios y roles de cocina en base de datos;
 3. política de retención para teléfono y dirección;
 4. actualizaciones en tiempo real o polling respaldado por almacenamiento
    compartido.

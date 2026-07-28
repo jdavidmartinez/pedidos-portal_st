@@ -6,6 +6,10 @@ import {
   orderRepository,
 } from "@/lib/orders/order-repository";
 import { updateOrderSchema } from "@/lib/orders/order-schema";
+import {
+  getKitchenSession,
+  KitchenAuthConfigError,
+} from "@/lib/auth/kitchen-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,11 +21,25 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await getKitchenSession())) {
+      return Response.json(
+        { error: "Debes iniciar sesión para actualizar las órdenes." },
+        { status: 401, headers: noStoreHeaders }
+      );
+    }
+
     const { id } = await params;
     const payload = updateOrderSchema.parse(await request.json());
     const order = await orderRepository.update(id, payload);
     return Response.json({ order }, { headers: noStoreHeaders });
   } catch (error) {
+    if (error instanceof KitchenAuthConfigError) {
+      return Response.json(
+        { error: error.message },
+        { status: 503, headers: noStoreHeaders }
+      );
+    }
+
     if (error instanceof ZodError) {
       return Response.json(
         { error: "La actualización no es válida.", issues: error.issues },

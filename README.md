@@ -29,11 +29,28 @@ Rutas principales:
 
 WhatsApp no transporta las órdenes y no requiere API, QR ni sesión automatizada.
 
+## Acceso de cocina
+
+`/cocina` requiere usuario y contraseña. En esta primera versión temporal las
+credenciales están hardcodeadas en el servidor:
+
+- Usuario: `cocina`
+- Contraseña: `portalst`
+
+Solo debes configurar `AUTH_SECRET` en `.env.local` y en Vercel:
+
+```bash
+openssl rand -hex 32
+```
+
+La sesión se firma con `AUTH_SECRET` y se guarda en una cookie `httpOnly` con expiración de 12 horas.
+El `POST /api/orders` permanece público para que los clientes puedan enviar
+pedidos; la consulta y actualización de órdenes requieren autenticación.
+
 ## Limitación del MVP
 
 Las órdenes se guardan en PostgreSQL mediante `DATABASE_URL`. La migración
-inicial se ejecuta con `npm run db:migrate`. Antes de usar el sistema con
-clientes reales debe protegerse `/cocina`.
+inicial se ejecuta con `npm run db:migrate`.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados y ruta de migración a almacenamiento durable.

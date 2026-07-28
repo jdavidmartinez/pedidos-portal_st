@@ -6,6 +6,10 @@ import {
   orderRepository,
 } from "@/lib/orders/order-repository";
 import { createOrderSchema } from "@/lib/orders/order-schema";
+import {
+  getKitchenSession,
+  KitchenAuthConfigError,
+} from "@/lib/auth/kitchen-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,11 +18,25 @@ const noStoreHeaders = { "Cache-Control": "no-store" };
 
 export async function GET() {
   try {
+    if (!(await getKitchenSession())) {
+      return Response.json(
+        { error: "Debes iniciar sesión para consultar las órdenes." },
+        { status: 401, headers: noStoreHeaders }
+      );
+    }
+
     return Response.json(
       { orders: await orderRepository.list() },
       { headers: noStoreHeaders }
     );
   } catch (error) {
+    if (error instanceof KitchenAuthConfigError) {
+      return Response.json(
+        { error: error.message },
+        { status: 503, headers: noStoreHeaders }
+      );
+    }
+
     if (error instanceof DatabaseNotConfiguredError) {
       return Response.json(
         { error: error.message },
