@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import Image from 'next/image';
+import React, { useMemo, useState } from 'react';
 import { MENU_PORTAL, Producto } from './data';
 import type { Order } from '@/types/order';
 
@@ -21,14 +22,56 @@ export default function LandingMenuPage() {
   const [customerName, setCustomerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [observations, setObservations] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  const itemsSeleccionados = useMemo(
+    () =>
+      Object.entries(cantidades)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([name, quantity]) => {
+          const product = Object.values(MENU_PORTAL)
+            .flat()
+            .find((item) => item.nombre === name);
+
+          return {
+            name,
+            quantity,
+            unitPrice: product?.precioIndividual ?? 0,
+          };
+        }),
+    [cantidades]
+  );
+
+  const cantidadTotal = itemsSeleccionados.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = itemsSeleccionados.reduce(
+    (total, item) => total + item.quantity * item.unitPrice,
+    0
+  );
 
   const cambiarCantidad = (nombre: string, incremento: number) => {
     setCantidades(prev => ({
       ...prev,
       [nombre]: Math.max(0, (prev[nombre] || 0) + incremento)
     }));
+  };
+
+  const cerrarChat = () => {
+    setIsChatOpen(false);
+
+    if (orderSubmitted) {
+      setCantidades({});
+      setCustomerName('');
+      setDeliveryAddress('');
+      setPhoneNumber('');
+      setObservations('');
+      setMensajes([]);
+      setInputUsuario('');
+      setIsConfirmedByAI(false);
+      setOrderSubmitted(false);
+      setSubmitError('');
+    }
   };
 
   const iniciarOrdenConIA = async () => {
@@ -117,6 +160,7 @@ export default function LandingMenuPage() {
             phone: phoneNumber,
           },
           items,
+          observations: observations.trim() || undefined,
         })
       });
       const data = await response.json() as { order?: Order; error?: string };
@@ -152,7 +196,7 @@ export default function LandingMenuPage() {
 
   return (
     /* Global user text selection matching brand red #B03336 */
-    <div className="relative min-h-screen pb-24 selection:bg-[#B03336] selection:text-[#FEFEFE]">
+    <div className="relative min-h-screen pb-12 selection:bg-[#B03336] selection:text-[#FEFEFE]">
       
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@600;700;900&display=swap');
@@ -170,18 +214,21 @@ export default function LandingMenuPage() {
       />
       
       {/* SOLID BLACK HEADER BANNER - Underlined with exact brand red #B03336 */}
-      <header className="relative w-full py-12 px-4 bg-black border-b-4 border-[#B03336] flex items-center justify-center">
+      <header className="relative flex w-full items-center justify-center border-b-4 border-[#B03336] bg-black px-4 py-6">
         <div className="relative max-w-sm transition-transform duration-350 hover:scale-102">
-          <img 
+          <Image
             src="/images/Logo-Portal.png" 
             alt="Portal Street Brand Logo"
-            className="h-44 md:h-56 w-auto object-contain"
+            width={1600}
+            height={1600}
+            loading="eager"
+            className="h-24 w-24 object-contain sm:h-28 sm:w-28 md:h-32 md:w-32"
           />
         </div>
       </header>
 
       {/* Navigation Selection Layer */}
-      <nav className="relative bg-black/40 backdrop-blur-xs px-4 py-4 grid grid-cols-1 gap-2 sm:grid-cols-3 max-w-4xl mx-auto w-full">
+      <nav className="relative bg-black/40 backdrop-blur-xs px-4 py-4 flex gap-2 overflow-x-auto sm:grid sm:grid-cols-3 max-w-4xl mx-auto w-full">
         {Object.keys(MENU_PORTAL).map((cat) => (
           <button 
             key={cat} 
@@ -190,7 +237,7 @@ export default function LandingMenuPage() {
             /* COLOR CORRECTION: Active state background and custom border set explicitly 
               to hex color #B03336 to lock down a single visual language across the layout.
             */
-            className={`w-full px-5 py-3 rounded-xl font-bold text-sm tracking-wider transition-all uppercase border-2 ${
+            className={`w-full min-w-max px-5 py-3 rounded-xl font-bold text-sm tracking-wider transition-all uppercase border-2 ${
               categoriaActiva === cat 
                 ? 'bg-[#B03336] text-[#FEFEFE] border-[#B03336] shadow-xl transform scale-[1.01]' 
                 : 'bg-[#201E1E]/95 text-[#FEFEFE]/80 border-neutral-800/80 hover:border-[#B03336]'
@@ -202,14 +249,39 @@ export default function LandingMenuPage() {
       </nav>
 
       {/* Main Catalog View */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="grid gap-6 md:grid-cols-2">
+      <section
+        aria-label="Resumen del pedido"
+        className="sticky top-0 z-30 mx-auto w-full max-w-4xl bg-black/95 px-4 py-2 backdrop-blur-md"
+        style={{ position: 'sticky', top: 0, zIndex: 30 }}
+      >
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#B03336]/60 bg-[#201E1E] px-4 py-3 shadow-xl">
+          <div className="min-w-0 flex-1 text-left">
+            <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">
+              {cantidadTotal === 0 ? 'Tu pedido está vacío' : `${cantidadTotal} ${cantidadTotal === 1 ? 'producto' : 'productos'} en tu pedido`}
+            </p>
+            <p style={{ fontFamily: fontSecondary }} className="text-sm text-[#FEFEFE]/65">
+              {cantidadTotal === 0 ? 'Selecciona productos para comenzar' : `Subtotal ${formatCOP(subtotal)}`}
+            </p>
+          </div>
+          <button
+            onClick={iniciarOrdenConIA}
+            disabled={cantidadTotal === 0}
+            style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: cantidadTotal === 0 ? '#525252' : '#B03336' }}
+            className="shrink-0 rounded-xl border border-amber-500/20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#FEFEFE] shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:text-[#FEFEFE]/45 disabled:hover:scale-100 sm:px-6"
+          >
+            {cantidadTotal === 0 ? 'Selecciona productos' : 'Revisar pedido'}
+          </button>
+        </div>
+      </section>
+
+      <main className="mx-auto w-full max-w-4xl px-4 py-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
             const cantidadActual = cantidades[plato.nombre] || 0;
             return (
               /* Hover cards border line highlighted with brand red #B03336 */
               <div key={idx} className="bg-[#201E1E]/95 rounded-2xl overflow-hidden border-2 border-neutral-800/60 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:border-[#B03336]/50">
-                <div className="h-48 bg-neutral-900 relative">
+                <div className="relative h-40 w-full overflow-hidden bg-neutral-900 sm:h-44">
                   <img src={plato.imagen} alt={plato.nombre} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between">
@@ -230,9 +302,9 @@ export default function LandingMenuPage() {
                     </div>
                     <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
                       {/* Counter interface colors adjusted to hover on brand red #B03336 */}
-                      <button onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">-</button>
+                      <button aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">-</button>
                       <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
-                      <button onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">+</button>
+                      <button aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="w-8 h-8 text-[#FEFEFE]/70 hover:text-[#B03336] font-bold text-lg transition-colors">+</button>
                     </div>
                   </div>
                 </div>
@@ -242,17 +314,6 @@ export default function LandingMenuPage() {
         </div>
       </main>
 
-      {/* Floating Review CTA - Background explicitly configured to exact brand red hex #B03336 */}
-      <div className="fixed bottom-6 inset-x-4 z-40 text-center">
-        <button 
-          onClick={iniciarOrdenConIA}
-          style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}
-          className="w-full max-w-md text-[#FEFEFE] font-bold py-4 rounded-xl uppercase text-xs tracking-wider transition-all duration-300 transform hover:scale-[1.02] shadow-2xl active:scale-[0.98] border border-amber-500/20"
-        >
-          🤖 Revisar Pedido
-        </button>
-      </div>
-
       {/* Terminal Modal System */}
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -261,7 +322,7 @@ export default function LandingMenuPage() {
             
             <div className="p-4 border-b border-neutral-850 flex justify-between items-center bg-neutral-950">
               <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">Terminal de Cocina</span>
-              <button onClick={() => setIsChatOpen(false)} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-[#FEFEFE]/70 hover:text-[#FEFEFE] text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
+              <button onClick={cerrarChat} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-[#FEFEFE]/70 hover:text-[#FEFEFE] text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20">
@@ -302,6 +363,21 @@ export default function LandingMenuPage() {
               {isConfirmedByAI && !orderSubmitted && (
                 <form onSubmit={enviarFormularioACocina} className="mt-4 bg-black/45 p-4 rounded-xl border border-neutral-800 space-y-3">
                   <h4 style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs font-black uppercase text-[#B03336] tracking-wider border-b border-neutral-800 pb-2 mb-2">Datos de Entrega</h4>
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-950/70 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">Resumen del pedido</p>
+                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(subtotal)}</span>
+                    </div>
+                    <ul className="space-y-1 text-xs text-[#FEFEFE]/75">
+                      {itemsSeleccionados.map((item) => (
+                        <li key={item.name} className="flex justify-between gap-3">
+                          <span>{item.quantity}x {item.name}</span>
+                          <span className="shrink-0">{formatCOP(item.quantity * item.unitPrice)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-[#FEFEFE]/45">El domicilio se confirma por separado con el restaurante.</p>
+                  </div>
                   <div>
                     <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">Nombre Completo</label>
                     <input 
@@ -328,6 +404,21 @@ export default function LandingMenuPage() {
                       placeholder="Ej. 3213166885"
                       className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336] placeholder:text-neutral-700"
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="order-observations" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-[#FEFEFE]/60 mb-1">
+                      Observaciones <span className="normal-case font-normal text-[#FEFEFE]/40">(opcional)</span>
+                    </label>
+                    <textarea
+                      id="order-observations"
+                      value={observations}
+                      onChange={(event) => setObservations(event.target.value)}
+                      maxLength={500}
+                      rows={3}
+                      placeholder="Ej. Sin cebolla, llamar al llegar..."
+                      className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-[#FEFEFE] outline-none focus:border-[#B03336] placeholder:text-neutral-700"
+                    />
+                    <p className="mt-1 text-right text-[10px] text-[#FEFEFE]/35">{observations.length}/500</p>
                   </div>
                   <button 
                     type="submit" disabled={cargando}

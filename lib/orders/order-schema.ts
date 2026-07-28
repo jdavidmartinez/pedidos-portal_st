@@ -15,6 +15,7 @@ const orderItemSchema = z.object({
 export const createOrderSchema = z.object({
   customer: customerSchema,
   items: z.array(orderItemSchema).min(1).max(50),
+  observations: z.string().trim().max(500).optional(),
 });
 
 export const updateOrderSchema = z

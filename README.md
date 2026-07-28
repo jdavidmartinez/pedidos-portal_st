@@ -17,7 +17,7 @@ Rutas principales:
 
 ## Flujo actual
 
-1. El cliente selecciona productos y confirma sus datos en `/menu`.
+1. El cliente selecciona productos, agrega observaciones opcionales y confirma sus datos en `/menu`.
 2. `POST /api/orders` valida los datos y recalcula los precios usando el menú
    canónico del servidor.
 3. PostgreSQL en Neon guarda la orden y sus productos.

@@ -34,6 +34,9 @@ export function buildOrderWhatsAppMessage(
     `Subtotal: ${formatCOP(order.subtotal)}`,
     `Domicilio: ${deliveryLine}`,
     `Total: ${totalLine}`,
+    ...(order.observations
+      ? ["", `Observaciones del cliente: ${order.observations}`]
+      : []),
     "",
     "¿Estás de acuerdo con el pedido y con el costo final?",
   ].join("\n");

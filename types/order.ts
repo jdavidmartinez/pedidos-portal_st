@@ -29,6 +29,7 @@ export interface Order {
   subtotal: number;
   deliveryFee: number | null;
   total: number;
+  observations: string | null;
   status: OrderStatus;
   receivedAt: string;
   updatedAt: string;
@@ -45,6 +46,7 @@ export interface CreateOrderInput {
     name: string;
     quantity: number;
   }>;
+  observations?: string;
 }
 
 export interface UpdateOrderInput {

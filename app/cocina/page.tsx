@@ -202,6 +202,16 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           >
             WhatsApp +{order.customer.phone}
           </a>
+          {order.observations && (
+            <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-200/75">
+                Observaciones
+              </p>
+              <p className="mt-1 whitespace-pre-line text-xs text-amber-100">
+                {order.observations}
+              </p>
+            </div>
+          )}
         </section>
 
         <section className="border-t border-white/10 pt-3">

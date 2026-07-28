@@ -24,6 +24,7 @@ Una orden contiene:
 - identificador interno UUID;
 - número consecutivo visible;
 - nombre, dirección y teléfono normalizado del cliente;
+- observaciones opcionales del cliente (máximo 500 caracteres);
 - productos, cantidades, precios unitarios y totales por línea;
 - subtotal, domicilio y total;
 - estado;
@@ -66,9 +67,9 @@ También se aceptan números internacionales que ya incluyan su código de país
 https://wa.me/<telefono>?text=<mensaje-codificado>
 ```
 
-El mensaje incluye número de orden, productos, subtotal, domicilio, total y la
-pregunta de confirmación. Una persona debe revisar y enviar el mensaje desde
-WhatsApp.
+El mensaje incluye número de orden, productos, subtotal, domicilio, total,
+observaciones (si existen) y la pregunta de confirmación. Una persona debe
+revisar y enviar el mensaje desde WhatsApp.
 
 ## Almacenamiento
 
@@ -76,7 +77,7 @@ WhatsApp.
 `PostgresOrderRepository` persiste las órdenes y productos en Neon mediante el
 driver oficial `@neondatabase/serverless`.
 
-La migración inicial está en `db/migrations/0001_orders.sql` y se aplica con:
+Las migraciones están en `db/migrations/` y se aplican con:
 
 ```bash
 npm run db:migrate

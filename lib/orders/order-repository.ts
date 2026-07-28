@@ -31,6 +31,7 @@ interface OrderRow {
   subtotal: number | string;
   delivery_fee: number | string | null;
   total: number | string;
+  observations: string | null;
   status: OrderStatus;
   received_at: string;
   updated_at: string;
@@ -132,6 +133,7 @@ function toOrder(row: OrderRow): Order {
     deliveryFee:
       row.delivery_fee === null ? null : toNumber(row.delivery_fee),
     total: toNumber(row.total),
+    observations: row.observations?.trim() || null,
     status: row.status,
     receivedAt: new Date(row.received_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
@@ -165,12 +167,13 @@ class PostgresOrderRepository implements OrderRepository {
         INSERT INTO orders (
           id, customer_name, customer_address, customer_phone,
           subtotal, delivery_fee, total, status,
-          received_at, updated_at, completed_at
+          observations, received_at, updated_at, completed_at
         ) VALUES (
           ${orderId}, ${input.customer.name.trim()},
           ${input.customer.address.trim()},
           ${normalizePhone(input.customer.phone)}, ${subtotal},
-          ${null}, ${subtotal}, 'received', ${now}, ${now}, ${null}
+          ${null}, ${subtotal}, 'received',
+          ${input.observations?.trim() || null}, ${now}, ${now}, ${null}
         )
       `,
       ...itemQueries,
@@ -191,6 +194,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.subtotal,
         o.delivery_fee,
         o.total,
+        o.observations,
         o.status,
         o.received_at,
         o.updated_at,
@@ -289,6 +293,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.subtotal,
         o.delivery_fee,
         o.total,
+        o.observations,
         o.status,
         o.received_at,
         o.updated_at,
