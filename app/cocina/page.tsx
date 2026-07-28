@@ -560,6 +560,12 @@ export default function KitchenPage() {
             >
               Cerrar sesión
             </button>
+            <a
+              href="/admin"
+              className="rounded-lg border border-[#facc15]/60 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#facc15] transition hover:bg-[#facc15]/10"
+            >
+              Administrar menú
+            </a>
           </div>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { menuRepository } from '@/lib/menu/menu-repository';
 
 interface MenuMessage {
   role: 'user' | 'bot';
@@ -12,16 +13,6 @@ interface GeminiResponse {
     };
   }>;
 }
-
-const CONTEXTO_MENU = `
-MENU PORTAL ST:
-- HAMBURGUESA PORTAL: Individual $18,000 COP, Combo $27,800 COP.
-- HAMBURGUESA PORTAZO: Individual $28,000 COP, Combo $37,800 COP.
-- HAMBURGUESA RANCHERA: Individual $22,500 COP, Combo $32,300 COP.
-- AREPA BURGUER: Individual $19,000 COP, Combo $28,800 COP.
-- PERRO PORTAL: Individual $14,500 COP, Combo $24,300 COP.
-- SALCHIPAPA PORTAL: Individual $24,500 COP.
-`;
 
 export async function POST(request: Request) {
   try {
@@ -48,9 +39,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Falta la API Key en las variables de entorno." }, { status: 500 });
     }
 
+    const catalog = await menuRepository.listActive();
+    const contextoMenu = catalog
+      .flatMap((category) => category.products.map((product) => {
+        const combo = product.comboPrice === null
+          ? ''
+          : `, Combo $${product.comboPrice.toLocaleString('es-CO')} COP`;
+        return `- ${product.name}: Individual $${product.individualPrice.toLocaleString('es-CO')} COP${combo}.`;
+      }))
+      .join('\n');
+
     const systemInstruction = `
     Eres el asistente virtual interno de la app web de 'Portal ST'. Tu objetivo es procesar el pedido que el usuario seleccionó en la interfaz.
-    Menú oficial: ${CONTEXTO_MENU}
+    Menú oficial actualizado desde el catálogo: ${contextoMenu}
     
     Instrucciones:
     - Habla en español, de forma muy cordial, breve y profesional.

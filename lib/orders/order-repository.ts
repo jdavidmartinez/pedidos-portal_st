@@ -1,8 +1,9 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { MENU_PORTAL } from "@/app/menu/data";
 import { getSql } from "@/lib/db/neon";
+import { menuRepository } from "@/lib/menu/menu-repository";
+import type { MenuProduct } from "@/lib/menu/menu-repository";
 import type {
   CreateOrderInput,
   Order,
@@ -47,12 +48,6 @@ interface CurrentOrderRow {
   completed_at: string | null;
 }
 
-const productsByName = new Map(
-  Object.values(MENU_PORTAL)
-    .flat()
-    .map((product) => [product.nombre, product] as const)
-);
-
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   received: ["accepted", "rejected"],
   accepted: ["preparing", "rejected"],
@@ -83,7 +78,10 @@ function normalizePhone(phone: string) {
   );
 }
 
-function buildItems(input: CreateOrderInput): OrderItem[] {
+function buildItems(
+  input: CreateOrderInput,
+  productsByName: Map<string, MenuProduct>
+): OrderItem[] {
   const quantities = new Map<string, number>();
 
   for (const item of input.items) {
@@ -99,8 +97,8 @@ function buildItems(input: CreateOrderInput): OrderItem[] {
     return {
       name,
       quantity,
-      unitPrice: product.precioIndividual,
-      lineTotal: product.precioIndividual * quantity,
+      unitPrice: product.individualPrice,
+      lineTotal: product.individualPrice * quantity,
     };
   });
 }
@@ -146,7 +144,9 @@ function toOrder(row: OrderRow): Order {
 class PostgresOrderRepository implements OrderRepository {
   async create(input: CreateOrderInput) {
     const sql = getSql();
-    const items = buildItems(input);
+    const products = await menuRepository.listActiveProducts();
+    const productsByName = new Map(products.map((product) => [product.name, product]));
+    const items = buildItems(input, productsByName);
     const subtotal = items.reduce((total, item) => total + item.lineTotal, 0);
     const orderId = randomUUID();
     const now = new Date().toISOString();

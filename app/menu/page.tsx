@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import React, { useMemo, useState } from 'react';
-import { MENU_PORTAL, Producto } from './data';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { CategoriasMenu, Producto } from './data';
 import type { Order } from '@/types/order';
 
 interface Mensaje {
@@ -11,7 +11,10 @@ interface Mensaje {
 }
 
 export default function LandingMenuPage() {
-  const [categoriaActiva, setCategoriaActiva] = useState<string>(Object.keys(MENU_PORTAL)[0]);
+  const [menu, setMenu] = useState<CategoriasMenu>({});
+  const [categoriaActiva, setCategoriaActiva] = useState('');
+  const [menuLoading, setMenuLoading] = useState(true);
+  const [menuError, setMenuError] = useState('');
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isGeminiMode, setIsGeminiMode] = useState(false);
@@ -27,12 +30,73 @@ export default function LandingMenuPage() {
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const cargarMenu = async () => {
+      setMenuLoading(true);
+      setMenuError('');
+
+      try {
+        const response = await fetch('/api/menu', { cache: 'no-store' });
+        const payload = await response.json() as {
+          categories?: Array<{
+            name: string;
+            products: Array<{
+              id: string;
+              slug: string;
+              name: string;
+              description: string;
+              individualPrice: number;
+              comboPrice: number | null;
+              imageUrl: string;
+            }>;
+          }>;
+          error?: string;
+        };
+
+        if (!response.ok || !payload.categories) {
+          throw new Error(payload.error || 'No fue posible cargar el menú.');
+        }
+
+        if (!cancelled) {
+          const nextMenu = payload.categories.reduce<CategoriasMenu>((catalog, category) => {
+            catalog[category.name] = category.products.map((product) => ({
+              id: product.id,
+              slug: product.slug,
+              nombre: product.name,
+              descripcion: product.description,
+              precioIndividual: product.individualPrice,
+              precioCombo: product.comboPrice,
+              imagen: product.imageUrl,
+            }));
+            return catalog;
+          }, {});
+
+          setMenu(nextMenu);
+          setCategoriaActiva((current) => current && nextMenu[current]
+            ? current
+            : Object.keys(nextMenu)[0] || '');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMenuError(error instanceof Error ? error.message : 'No fue posible cargar el menú.');
+        }
+      } finally {
+        if (!cancelled) setMenuLoading(false);
+      }
+    };
+
+    void cargarMenu();
+    return () => { cancelled = true; };
+  }, []);
+
   const itemsSeleccionados = useMemo(
     () =>
       Object.entries(cantidades)
         .filter(([, quantity]) => quantity > 0)
         .map(([name, quantity]) => {
-          const product = Object.values(MENU_PORTAL)
+          const product = Object.values(menu)
             .flat()
             .find((item) => item.nombre === name);
 
@@ -42,7 +106,7 @@ export default function LandingMenuPage() {
             unitPrice: product?.precioIndividual ?? 0,
           };
         }),
-    [cantidades]
+    [cantidades, menu]
   );
 
   const cantidadTotal = itemsSeleccionados.reduce((total, item) => total + item.quantity, 0);
@@ -242,7 +306,7 @@ export default function LandingMenuPage() {
 
       {/* Navigation Selection Layer */}
       <nav className="relative bg-black/40 backdrop-blur-xs px-4 py-4 flex gap-2 overflow-x-auto sm:grid sm:grid-cols-3 max-w-4xl mx-auto w-full">
-        {Object.keys(MENU_PORTAL).map((cat) => (
+        {Object.keys(menu).map((cat) => (
           <button 
             key={cat} 
             onClick={() => setCategoriaActiva(cat)} 
@@ -295,8 +359,19 @@ export default function LandingMenuPage() {
       </section>
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
+        {menuLoading && (
+          <p className="py-12 text-center text-sm text-white" style={{ fontFamily: fontSecondary }}>
+            Cargando el menú...
+          </p>
+        )}
+        {!menuLoading && menuError && (
+          <p role="alert" className="rounded-xl border border-red-400/60 bg-red-950/50 px-4 py-6 text-center text-sm text-red-100" style={{ fontFamily: fontSecondary }}>
+            {menuError}
+          </p>
+        )}
+        {!menuLoading && !menuError && (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {MENU_PORTAL[categoriaActiva]?.map((plato: Producto, idx: number) => {
+          {menu[categoriaActiva]?.map((plato: Producto, idx: number) => {
             const cantidadActual = cantidades[plato.nombre] || 0;
             return (
               /* Hover cards border line highlighted with brand red #B03336 */
@@ -332,6 +407,7 @@ export default function LandingMenuPage() {
             );
           })}
         </div>
+        )}
       </main>
 
       {/* Terminal Modal System */}

@@ -35,7 +35,11 @@ Una orden contiene:
 - fecha de recepción, última actualización y finalización.
 
 El navegador no decide los precios. Solo envía nombres y cantidades; el servidor
-busca cada producto en `app/menu/data.ts` y calcula los valores canónicos.
+valida cada producto activo en `menu_products` y calcula los valores canónicos.
+
+El catálogo visible de `/menu` se carga desde `GET /api/menu`. Las categorías,
+precios, imágenes y disponibilidad se mantienen en Neon para que la futura
+sección de administración pueda actualizarlos sin modificar el código.
 
 ## Estados
 
@@ -54,13 +58,27 @@ la orden es despachada o rechazada.
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
+| `GET` | `/api/menu` | Devuelve las categorías y productos activos para `/menu`. |
 | `GET` | `/api/orders` | Lista las órdenes más recientes primero. |
 | `POST` | `/api/orders` | Valida y crea una orden. |
 | `PATCH` | `/api/orders/[id]` | Actualiza estado o costo de domicilio. |
+| `GET` | `/api/admin/menu` | Lista el catálogo completo para administración. |
+| `POST` | `/api/admin/menu` | Crea un producto del catálogo. |
+| `PATCH` | `/api/admin/menu/[id]` | Edita un producto del catálogo. |
 
 Las respuestas usan `Cache-Control: no-store`. `GET /api/orders` y `PATCH
 /api/orders/[id]` requieren la sesión autenticada de cocina; `POST /api/orders`
 permanece público para los clientes.
+
+## Administración del menú
+
+`/admin` reutiliza la sesión autenticada de cocina durante el MVP. Permite
+editar nombre, descripción, precios, categoría, orden, cantidad disponible,
+disponibilidad y ruta o URL de imagen. Una cantidad vacía representa inventario
+ilimitado; una cantidad de `0` oculta el producto y evita nuevos pedidos.
+También permite crear productos. La carga de archivos todavía no
+está conectada a Blob; mientras se preparan las fotos se pueden usar rutas
+locales como `/images/hamburguesa-portal.webp`.
 
 ## Autenticación de cocina
 
@@ -102,6 +120,12 @@ npm run db:migrate
 
 La variable `DATABASE_URL` debe existir en `.env.local` para desarrollo y en
 las variables de entorno de Vercel para cada ambiente.
+
+Las migraciones `0003_menu_catalog.sql` y `0004_menu_product_quantity.sql`
+crean `menu_categories` y `menu_products` y
+siembra el catálogo inicial que antes estaba definido en archivos estáticos.
+Los productos se pueden desactivar con `active = false` sin borrar su registro;
+las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 
 ## Migración futura a base de datos
 

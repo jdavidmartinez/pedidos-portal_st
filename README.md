@@ -49,8 +49,15 @@ pedidos; la consulta y actualización de órdenes requieren autenticación.
 
 ## Limitación del MVP
 
-Las órdenes se guardan en PostgreSQL mediante `DATABASE_URL`. La migración
-inicial se ejecuta con `npm run db:migrate`.
+Las órdenes y el catálogo del menú se guardan en PostgreSQL mediante
+`DATABASE_URL`. Las migraciones, incluida la carga inicial del catálogo, se
+ejecutan con `npm run db:migrate`.
+
+`/menu` obtiene las categorías y productos activos desde `/api/menu`; el
+`/admin` permite modificar esos registros sin editar el código de la
+aplicación. Por ahora la autenticación de administrador reutiliza las
+credenciales temporales de cocina y las imágenes se indican mediante una ruta
+local o URL.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados y ruta de migración a almacenamiento durable.

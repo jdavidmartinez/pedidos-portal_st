@@ -28,7 +28,8 @@ export default function KitchenLoginPage() {
         throw new Error(payload.error || "No fue posible iniciar sesión.");
       }
 
-      router.replace("/cocina");
+      const nextPath = new URLSearchParams(window.location.search).get("next");
+      router.replace(nextPath === "/admin" ? "/admin" : "/cocina");
       router.refresh();
     } catch (loginError) {
       setError(
