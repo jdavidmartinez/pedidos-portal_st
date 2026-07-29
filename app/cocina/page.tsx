@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildOrderWhatsAppUrl } from "@/lib/orders/whatsapp-link";
+import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order, OrderStatus, UpdateOrderInput } from "@/types/order";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -120,6 +121,14 @@ interface OrderCardProps {
   now: number;
   updating: boolean;
   onUpdate: (id: string, input: UpdateOrderInput) => Promise<void>;
+}
+
+interface OrdersPagination {
+  date: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasNextPage: boolean;
 }
 
 function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
@@ -370,10 +379,16 @@ export default function KitchenPage() {
     "checking" | "authenticated" | "unauthenticated"
   >("checking");
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(() => Date.now());
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [exportDate, setExportDate] = useState(() => getTodayInColombia());
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -411,11 +426,21 @@ export default function KitchenPage() {
     };
   }, []);
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (requestedPage = page) => {
+    if (requestedPage !== page) setPageLoading(true);
+
     try {
-      const response = await fetch("/api/orders", { cache: "no-store" });
+      const query = new URLSearchParams({
+        date: getTodayInColombia(),
+        page: String(requestedPage),
+        pageSize: "12",
+      });
+      const response = await fetch(`/api/orders?${query.toString()}`, {
+        cache: "no-store",
+      });
       const payload = (await response.json()) as {
         orders?: Order[];
+        pagination?: OrdersPagination;
         error?: string;
       };
 
@@ -429,6 +454,9 @@ export default function KitchenPage() {
       }
 
       setOrders(payload.orders);
+      setPage(payload.pagination?.page ?? requestedPage);
+      setHasNextPage(payload.pagination?.hasNextPage ?? false);
+      setTotalOrders(payload.pagination?.total ?? payload.orders.length);
       setError("");
       setLastUpdatedAt(new Date());
     } catch (loadError) {
@@ -439,8 +467,9 @@ export default function KitchenPage() {
       );
     } finally {
       setLoading(false);
+      setPageLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
@@ -504,6 +533,46 @@ export default function KitchenPage() {
     window.location.replace("/cocina/login");
   }
 
+  async function downloadConsolidatedOrders() {
+    setExporting(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/orders/export?date=${encodeURIComponent(exportDate)}`,
+        { cache: "no-store" }
+      );
+
+      if (response.status === 401) {
+        window.location.replace("/cocina/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "No fue posible descargar el consolidado.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ordenes-${exportDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setError(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "No fue posible descargar el consolidado."
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (authState !== "authenticated") {
     return (
       <main
@@ -546,7 +615,7 @@ export default function KitchenPage() {
           </div>
           <div className="flex items-end gap-4 text-right text-xs text-white/45">
             <div>
-              <p>{orders.length} órdenes en esta sesión</p>
+              <p>{totalOrders} órdenes del día</p>
               <p className="mt-1">
                 {lastUpdatedAt
                   ? `Actualizado ${lastUpdatedAt.toLocaleTimeString("es-CO")}`
@@ -618,6 +687,70 @@ export default function KitchenPage() {
             ))}
           </section>
         )}
+
+        {!loading && orders.length > 0 && (page > 1 || hasNextPage) && (
+          <nav
+            aria-label="Paginación de órdenes del día"
+            className="mt-6 flex items-center justify-center gap-3"
+          >
+            <button
+              type="button"
+              disabled={page <= 1 || pageLoading}
+              onClick={() => {
+                setPage(page - 1);
+                void loadOrders(page - 1);
+              }}
+              className="rounded-lg border border-white/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Anteriores
+            </button>
+            <span className="text-xs font-bold text-white/60">
+              Página {page}
+            </span>
+            <button
+              type="button"
+              disabled={!hasNextPage || pageLoading}
+              onClick={() => {
+                setPage(page + 1);
+                void loadOrders(page + 1);
+              }}
+              className="rounded-lg border border-white/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-white transition hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Siguientes
+            </button>
+          </nav>
+        )}
+
+        <section className="mt-8 rounded-2xl border border-white/10 bg-[#171717] px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-wider text-white">
+              Consolidado histórico
+            </h2>
+            <p className="mt-1 text-xs text-white/50">
+              Descarga las comandas almacenadas de una fecha anterior o del día actual.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 sm:mt-0">
+            <label className="sr-only" htmlFor="orders-export-date">
+              Fecha del consolidado
+            </label>
+            <input
+              id="orders-export-date"
+              type="date"
+              value={exportDate}
+              onChange={(event) => setExportDate(event.target.value)}
+              className="rounded-lg border border-white/20 bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#facc15]"
+            />
+            <button
+              type="button"
+              onClick={() => void downloadConsolidatedOrders()}
+              disabled={exporting || !exportDate}
+              className="rounded-lg border border-[#facc15]/70 bg-[#facc15]/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-[#facc15] transition hover:bg-[#facc15]/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {exporting ? "Generando..." : "Descargar CSV"}
+            </button>
+          </div>
+        </section>
       </div>
     </main>
   );

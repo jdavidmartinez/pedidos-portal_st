@@ -35,7 +35,7 @@ const EMPTY_NEW_PRODUCT = {
   description: "",
   individualPrice: 0,
   comboPrice: null as number | null,
-  imageUrl: "/images/hamburguesa-portal.webp",
+  imageUrl: "/menu-comic-images/hamburguesa-portal-comic.png",
   availableQuantity: null as number | null,
   active: true,
   sortOrder: 0,
@@ -313,7 +313,7 @@ export default function AdminMenuClient({ username }: Props) {
                   <textarea rows={2} value={newProduct.description} onChange={(event) => setNewProduct({ ...newProduct, description: event.target.value })} className="resize-y rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
                 <label className="grid gap-1 text-[10px] font-black uppercase tracking-wider text-white/70 md:col-span-2">Ruta local o URL de imagen
-                  <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="/images/hamburguesa-portal.webp" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
+                  <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="/menu-comic-images/hamburguesa-portal-comic.png" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
               </div>
               <button type="submit" disabled={creating} className="mt-4 rounded-lg border border-[#facc15] bg-[#d97706] px-4 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:brightness-110 disabled:opacity-50">{creating ? "Creando..." : "Crear producto"}</button>

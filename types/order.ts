@@ -47,6 +47,8 @@ export interface CreateOrderInput {
     quantity: number;
   }>;
   observations?: string;
+  dataConsent: true;
+  dataConsentVersion: string;
 }
 
 export interface UpdateOrderInput {

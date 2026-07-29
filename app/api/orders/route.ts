@@ -7,6 +7,11 @@ import {
 } from "@/lib/orders/order-repository";
 import { createOrderSchema } from "@/lib/orders/order-schema";
 import {
+  getColombiaDateRange,
+  getTodayInColombia,
+  InvalidOrderDateError,
+} from "@/lib/orders/date-range";
+import {
   getKitchenSession,
   KitchenAuthConfigError,
 } from "@/lib/auth/kitchen-auth";
@@ -16,7 +21,7 @@ export const runtime = "nodejs";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!(await getKitchenSession())) {
       return Response.json(
@@ -25,8 +30,40 @@ export async function GET() {
       );
     }
 
+    const requestUrl = new URL(request.url);
+    const date = requestUrl.searchParams.get("date") || getTodayInColombia();
+    const page = Math.max(1, Number(requestUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(
+      50,
+      Math.max(1, Number(requestUrl.searchParams.get("pageSize") || "12"))
+    );
+
+    if (!Number.isInteger(page) || !Number.isInteger(pageSize)) {
+      return Response.json(
+        { error: "Los parámetros de paginación no son válidos." },
+        { status: 400, headers: noStoreHeaders }
+      );
+    }
+
+    const { from, to } = getColombiaDateRange(date);
+    const result = await orderRepository.list({
+      from,
+      to,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+
     return Response.json(
-      { orders: await orderRepository.list() },
+      {
+        orders: result.orders,
+        pagination: {
+          date,
+          page,
+          pageSize,
+          total: result.total,
+          hasNextPage: page * pageSize < result.total,
+        },
+      },
       { headers: noStoreHeaders }
     );
   } catch (error) {
@@ -44,6 +81,13 @@ export async function GET() {
       );
     }
 
+    if (error instanceof InvalidOrderDateError) {
+      return Response.json(
+        { error: error.message },
+        { status: 400, headers: noStoreHeaders }
+      );
+    }
+
     console.error("[orders] No fue posible consultar las órdenes:", error);
     return Response.json(
       { error: "No fue posible consultar las órdenes." },
@@ -54,9 +98,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const idempotencyKey = request.headers.get("Idempotency-Key")?.trim();
+    if (!idempotencyKey || idempotencyKey.length > 160) {
+      return Response.json(
+        { error: "Falta una clave válida para evitar órdenes duplicadas." },
+        { status: 400, headers: noStoreHeaders }
+      );
+    }
+
     const payload = createOrderSchema.parse(await request.json());
-    const order = await orderRepository.create(payload);
-    return Response.json({ order }, { status: 201, headers: noStoreHeaders });
+    const result = await orderRepository.create(payload, idempotencyKey);
+    return Response.json(
+      { order: result.order, duplicate: !result.created },
+      { status: result.created ? 201 : 200, headers: noStoreHeaders }
+    );
   } catch (error) {
     if (error instanceof ZodError) {
       return Response.json(

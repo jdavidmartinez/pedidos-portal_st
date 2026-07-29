@@ -4,6 +4,7 @@ import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CategoriasMenu, Producto } from './data';
 import type { Order } from '@/types/order';
+import { DATA_PROCESSING_POLICY_VERSION } from '@/lib/privacy/data-processing';
 
 interface Mensaje {
   role: 'user' | 'bot';
@@ -27,6 +28,8 @@ export default function LandingMenuPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [observations, setObservations] = useState('');
+  const [dataConsentAccepted, setDataConsentAccepted] = useState(false);
+  const [orderIdempotencyKey, setOrderIdempotencyKey] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -131,6 +134,8 @@ export default function LandingMenuPage() {
       setDeliveryAddress('');
       setPhoneNumber('');
       setObservations('');
+      setDataConsentAccepted(false);
+      setOrderIdempotencyKey('');
       setMensajes([]);
       setInputUsuario('');
       setIsConfirmedByAI(false);
@@ -148,6 +153,8 @@ export default function LandingMenuPage() {
     setSubmitError('');
     setMensajes([]);
     setInputUsuario('');
+    setDataConsentAccepted(false);
+    setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
   };
 
   const iniciarOrdenConIA = async () => {
@@ -156,6 +163,8 @@ export default function LandingMenuPage() {
     setIsConfirmedByAI(false);
     setOrderSubmitted(false);
     setSubmitError('');
+    setDataConsentAccepted(false);
+    setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     
     const seleccionados = Object.entries(cantidades)
       .filter(([, qty]) => qty > 0)
@@ -214,6 +223,11 @@ export default function LandingMenuPage() {
     e.preventDefault();
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
 
+    if (!dataConsentAccepted) {
+      setSubmitError('Debes aceptar el tratamiento de datos personales para enviar el pedido.');
+      return;
+    }
+
     const items = Object.entries(cantidades)
       .filter(([, qty]) => qty > 0)
       .map(([name, quantity]) => ({ name, quantity }));
@@ -229,7 +243,10 @@ export default function LandingMenuPage() {
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': orderIdempotencyKey || globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+        },
         body: JSON.stringify({
           customer: {
             name: customerName,
@@ -238,6 +255,8 @@ export default function LandingMenuPage() {
           },
           items,
           observations: observations.trim() || undefined,
+          dataConsent: true,
+          dataConsentVersion: DATA_PROCESSING_POLICY_VERSION,
         })
       });
       const data = await response.json() as { order?: Order; error?: string };
@@ -518,6 +537,26 @@ export default function LandingMenuPage() {
                     />
                     <p className="mt-1 text-right text-[10px] text-white">{observations.length}/500</p>
                   </div>
+                  <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white">
+                    <input
+                      type="checkbox"
+                      checked={dataConsentAccepted}
+                      onChange={(event) => setDataConsentAccepted(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#B03336]"
+                    />
+                    <span>
+                      Autorizo a Portal ST a tratar mis datos personales (nombre,
+                      dirección y teléfono) para gestionar y entregar este pedido.
+                      <a
+                        href="/tratamiento-datos"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-1 font-bold text-[#facc15] underline underline-offset-2"
+                      >
+                        Ver aviso de privacidad
+                      </a>
+                    </span>
+                  </label>
                   <button 
                     type="submit" disabled={cargando}
                     style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}

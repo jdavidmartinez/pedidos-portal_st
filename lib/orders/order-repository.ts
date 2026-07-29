@@ -13,15 +13,39 @@ import type {
 } from "@/types/order";
 
 export interface OrderRepository {
-  create(input: CreateOrderInput): Promise<Order>;
-  list(): Promise<Order[]>;
+  create(
+    input: CreateOrderInput,
+    idempotencyKey: string
+  ): Promise<{ order: Order; created: boolean }>;
+  list(options: OrderListOptions): Promise<OrderListResult>;
   update(id: string, input: UpdateOrderInput): Promise<Order>;
+}
+
+export interface OrderListOptions {
+  from: Date;
+  to: Date;
+  limit: number;
+  offset: number;
+}
+
+export interface OrderListResult {
+  orders: Order[];
+  total: number;
 }
 
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
 export class InvalidOrderItemError extends Error {}
 export class InvalidCustomerPhoneError extends Error {}
+
+function isUniqueViolation(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "23505"
+  );
+}
 
 interface OrderRow {
   id: string;
@@ -142,8 +166,11 @@ function toOrder(row: OrderRow): Order {
 }
 
 class PostgresOrderRepository implements OrderRepository {
-  async create(input: CreateOrderInput) {
+  async create(input: CreateOrderInput, idempotencyKey: string) {
     const sql = getSql();
+    const existingOrder = await this.findByIdempotencyKey(idempotencyKey);
+    if (existingOrder) return { order: existingOrder, created: false };
+
     const products = await menuRepository.listActiveProducts();
     const productsByName = new Map(products.map((product) => [product.name, product]));
     const items = buildItems(input, productsByName);
@@ -162,28 +189,46 @@ class PostgresOrderRepository implements OrderRepository {
       `
     );
 
-    await sql.transaction([
-      sql`
-        INSERT INTO orders (
-          id, customer_name, customer_address, customer_phone,
-          subtotal, delivery_fee, total, status,
-          observations, received_at, updated_at, completed_at
-        ) VALUES (
-          ${orderId}, ${input.customer.name.trim()},
-          ${input.customer.address.trim()},
-          ${normalizePhone(input.customer.phone)}, ${subtotal},
-          ${null}, ${subtotal}, 'received',
-          ${input.observations?.trim() || null}, ${now}, ${now}, ${null}
-        )
-      `,
-      ...itemQueries,
-    ]);
+    try {
+      await sql.transaction([
+        sql`
+          INSERT INTO orders (
+            id, customer_name, customer_address, customer_phone,
+            subtotal, delivery_fee, total, status,
+            observations, idempotency_key, data_consent_at,
+            data_consent_version, received_at, updated_at, completed_at
+          ) VALUES (
+            ${orderId}, ${input.customer.name.trim()},
+            ${input.customer.address.trim()},
+            ${normalizePhone(input.customer.phone)}, ${subtotal},
+            ${null}, ${subtotal}, 'received',
+            ${input.observations?.trim() || null}, ${idempotencyKey},
+            ${now}, ${input.dataConsentVersion}, ${now}, ${now}, ${null}
+          )
+        `,
+        ...itemQueries,
+      ]);
+    } catch (error) {
+      // Two requests with the same key can race before either one commits.
+      // The unique index makes one win; the loser returns the committed order.
+      if (isUniqueViolation(error)) {
+        const committedOrder = await this.findByIdempotencyKey(idempotencyKey);
+        if (committedOrder) return { order: committedOrder, created: false };
+      }
+      throw error;
+    }
 
-    return this.findById(orderId);
+    return { order: await this.findById(orderId), created: true };
   }
 
-  async list() {
+  async list({ from, to, limit, offset }: OrderListOptions) {
     const sql = getSql();
+    const countRows = (await sql`
+      SELECT COUNT(*)::int AS total
+      FROM orders
+      WHERE received_at >= ${from.toISOString()}
+        AND received_at < ${to.toISOString()}
+    `) as unknown as Array<{ total: number | string }>;
     const rows = await sql`
       SELECT
         o.id,
@@ -212,11 +257,18 @@ class PostgresOrderRepository implements OrderRepository {
         ) AS items
       FROM orders o
       LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.received_at >= ${from.toISOString()}
+        AND o.received_at < ${to.toISOString()}
       GROUP BY o.id
       ORDER BY o.received_at DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
     `;
 
-    return (rows as unknown as OrderRow[]).map(toOrder);
+    return {
+      orders: (rows as unknown as OrderRow[]).map(toOrder),
+      total: Number(countRows[0]?.total ?? 0),
+    };
   }
 
   async update(id: string, input: UpdateOrderInput) {
@@ -320,6 +372,43 @@ class PostgresOrderRepository implements OrderRepository {
     }
 
     return toOrder(rows[0] as unknown as OrderRow);
+  }
+
+  private async findByIdempotencyKey(key: string) {
+    const sql = getSql();
+    const rows = (await sql`
+      SELECT
+        o.id,
+        o.number,
+        o.customer_name,
+        o.customer_address,
+        o.customer_phone,
+        o.subtotal,
+        o.delivery_fee,
+        o.total,
+        o.observations,
+        o.status,
+        o.received_at,
+        o.updated_at,
+        o.completed_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'name', oi.name,
+              'quantity', oi.quantity,
+              'unitPrice', oi.unit_price,
+              'lineTotal', oi.line_total
+            ) ORDER BY oi.item_index
+          ) FILTER (WHERE oi.order_id IS NOT NULL),
+          '[]'::json
+        ) AS items
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.idempotency_key = ${key}
+      GROUP BY o.id
+    `) as unknown as OrderRow[];
+
+    return rows.length > 0 ? toOrder(rows[0] as unknown as OrderRow) : null;
   }
 }
 

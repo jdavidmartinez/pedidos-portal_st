@@ -1,0 +1,3 @@
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMPTZ;
+

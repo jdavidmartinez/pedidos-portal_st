@@ -29,6 +29,8 @@ Una orden contiene:
 - número consecutivo visible;
 - nombre, dirección y teléfono normalizado del cliente;
 - observaciones opcionales del cliente (máximo 500 caracteres);
+- versión y fecha de aceptación del aviso de tratamiento de datos personales;
+- clave de idempotencia para evitar duplicados por reintentos;
 - productos, cantidades, precios unitarios y totales por línea;
 - subtotal, domicilio y total;
 - estado;
@@ -36,6 +38,10 @@ Una orden contiene:
 
 El navegador no decide los precios. Solo envía nombres y cantidades; el servidor
 valida cada producto activo en `menu_products` y calcula los valores canónicos.
+
+El navegador envía una clave `Idempotency-Key` por intento de pedido. Si la
+misma petición se repite con la misma clave, la API devuelve la orden ya creada
+en lugar de insertar una nueva.
 
 El catálogo visible de `/menu` se carga desde `GET /api/menu`. Las categorías,
 precios, imágenes y disponibilidad se mantienen en Neon para que la futura
@@ -59,16 +65,31 @@ la orden es despachada o rechazada.
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | `GET` | `/api/menu` | Devuelve las categorías y productos activos para `/menu`. |
-| `GET` | `/api/orders` | Lista las órdenes más recientes primero. |
+| `GET` | `/api/orders` | Lista las órdenes de una fecha, paginadas; por defecto usa el día actual en `America/Bogota`. |
 | `POST` | `/api/orders` | Valida y crea una orden. |
 | `PATCH` | `/api/orders/[id]` | Actualiza estado o costo de domicilio. |
+| `GET` | `/api/orders/export?date=YYYY-MM-DD` | Descarga el consolidado CSV de una fecha. |
 | `GET` | `/api/admin/menu` | Lista el catálogo completo para administración. |
 | `POST` | `/api/admin/menu` | Crea un producto del catálogo. |
 | `PATCH` | `/api/admin/menu/[id]` | Edita un producto del catálogo. |
 
-Las respuestas usan `Cache-Control: no-store`. `GET /api/orders` y `PATCH
+Las respuestas usan `Cache-Control: no-store`. `GET /api/orders`, `GET
+/api/orders/export` y `PATCH
 /api/orders/[id]` requieren la sesión autenticada de cocina; `POST /api/orders`
 permanece público para los clientes.
+
+`/cocina` consulta únicamente el rango comprendido entre las 00:00 y las 24:00
+de `America/Bogota`, no el día UTC del servidor. Las páginas usan 12 órdenes por
+defecto y la exportación conserva las órdenes históricas en la base de datos.
+
+## Tratamiento de datos personales
+
+Antes de enviar una orden, el cliente debe aceptar el aviso disponible en
+`/tratamiento-datos`. La autorización se guarda con la orden mediante
+`data_consent_at` y `data_consent_version`. El aviso operativo v3 identifica a
+Grupo Empresarial PST SAS y establece una
+conservación de 12 meses después de la última orden, salvo obligaciones legales
+aplicables.
 
 ## Administración del menú
 
@@ -78,7 +99,9 @@ disponibilidad y ruta o URL de imagen. Una cantidad vacía representa inventario
 ilimitado; una cantidad de `0` oculta el producto y evita nuevos pedidos.
 También permite crear productos. La carga de archivos todavía no
 está conectada a Blob; mientras se preparan las fotos se pueden usar rutas
-locales como `/images/hamburguesa-portal.webp`.
+locales como `/menu-comic-images/hamburguesa-portal-comic.png`. La migración
+`0007_menu_comic_images.sql` asigna automáticamente la ilustración
+correspondiente a cada producto sembrado.
 
 ## Autenticación de cocina
 
@@ -124,6 +147,10 @@ las variables de entorno de Vercel para cada ambiente.
 Las migraciones `0003_menu_catalog.sql` y `0004_menu_product_quantity.sql`
 crean `menu_categories` y `menu_products` y
 siembra el catálogo inicial que antes estaba definido en archivos estáticos.
+La migración `0005_order_idempotency_and_data_consent.sql` agrega la clave única
+de idempotencia y los metadatos de consentimiento. La migración
+`0006_marketing_consent.sql` permanece aplicada por compatibilidad, pero su
+columna no se utiliza mientras las promociones estén fuera del alcance.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;
 las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 
