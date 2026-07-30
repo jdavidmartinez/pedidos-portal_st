@@ -117,7 +117,7 @@ Después de cada despliegue en Vercel:
 2. Crear una orden ficticia.
 3. Entrar a `/cocina` y verificar la orden.
 4. Cambiar su estado y domicilio.
-5. Descargar un consolidado de la fecha actual.
+5. Descargar un consolidado indicando fechas Desde y Hasta.
 6. Confirmar en Network que `/api/menu` y `/api/orders` responden `200` y no
    exponen secretos.
 7. Confirmar que una imagen de `/menu-comic-images/` responde `200`.

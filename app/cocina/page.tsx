@@ -479,7 +479,8 @@ export default function KitchenPage() {
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [exportDate, setExportDate] = useState(() => getTodayInColombia());
+  const [exportFromDate, setExportFromDate] = useState(() => getTodayInColombia());
+  const [exportUntilDate, setExportUntilDate] = useState(() => getTodayInColombia());
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -628,12 +629,17 @@ export default function KitchenPage() {
   }
 
   async function downloadConsolidatedOrders() {
+    if (exportFromDate > exportUntilDate) {
+      setError("La fecha Desde no puede ser posterior a la fecha Hasta.");
+      return;
+    }
+
     setExporting(true);
     setError("");
 
     try {
       const response = await fetch(
-        `/api/orders/export?date=${encodeURIComponent(exportDate)}`,
+        `/api/orders/export?from=${encodeURIComponent(exportFromDate)}&until=${encodeURIComponent(exportUntilDate)}`,
         { cache: "no-store" }
       );
 
@@ -651,7 +657,7 @@ export default function KitchenPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ordenes-${exportDate}.csv`;
+      link.download = `ordenes-${exportFromDate}-a-${exportUntilDate}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -821,24 +827,34 @@ export default function KitchenPage() {
               Consolidado histórico
             </h2>
             <p className="mt-1 text-xs text-white/50">
-              Descarga las comandas almacenadas de una fecha anterior o del día actual.
+              Descarga las comandas almacenadas entre dos fechas.
             </p>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 sm:mt-0">
-            <label className="sr-only" htmlFor="orders-export-date">
-              Fecha del consolidado
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-white/60">
+              Desde
+              <input
+                id="orders-export-from-date"
+                type="date"
+                value={exportFromDate}
+                onChange={(event) => setExportFromDate(event.target.value)}
+                className="rounded-lg border border-white/20 bg-black px-3 py-2 text-sm font-normal normal-case tracking-normal text-white outline-none focus:border-[#facc15]"
+              />
             </label>
-            <input
-              id="orders-export-date"
-              type="date"
-              value={exportDate}
-              onChange={(event) => setExportDate(event.target.value)}
-              className="rounded-lg border border-white/20 bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#facc15]"
-            />
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-white/60">
+              Hasta
+              <input
+                id="orders-export-until-date"
+                type="date"
+                value={exportUntilDate}
+                onChange={(event) => setExportUntilDate(event.target.value)}
+                className="rounded-lg border border-white/20 bg-black px-3 py-2 text-sm font-normal normal-case tracking-normal text-white outline-none focus:border-[#facc15]"
+              />
+            </label>
             <button
               type="button"
               onClick={() => void downloadConsolidatedOrders()}
-              disabled={exporting || !exportDate}
+              disabled={exporting || !exportFromDate || !exportUntilDate}
               className="rounded-lg border border-[#facc15]/70 bg-[#facc15]/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-[#facc15] transition hover:bg-[#facc15]/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {exporting ? "Generando..." : "Descargar CSV"}

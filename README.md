@@ -29,8 +29,8 @@ Rutas principales:
 
 La creación de órdenes usa una clave de idempotencia para que un reintento de
 red no genere una comanda duplicada. Las órdenes anteriores permanecen en Neon
-y pueden descargarse desde `/cocina` como un consolidado CSV seleccionando una
-fecha.
+y pueden descargarse desde `/cocina` como un consolidado CSV seleccionando un
+rango de fechas.
 
 El aviso operativo de privacidad está disponible en `/tratamiento-datos` e
 identifica a Grupo Empresarial PST SAS. La versión actual conserva los datos de

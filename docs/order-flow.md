@@ -68,7 +68,7 @@ la orden es despachada o rechazada.
 | `GET` | `/api/orders` | Lista las órdenes de una fecha, paginadas; por defecto usa el día actual en `America/Bogota`. |
 | `POST` | `/api/orders` | Valida y crea una orden. |
 | `PATCH` | `/api/orders/[id]` | Actualiza estado o costo de domicilio. |
-| `GET` | `/api/orders/export?date=YYYY-MM-DD` | Descarga el consolidado CSV de una fecha. |
+| `GET` | `/api/orders/export?from=YYYY-MM-DD&until=YYYY-MM-DD` | Descarga el consolidado CSV de un rango inclusivo de fechas. |
 | `GET` | `/api/admin/menu` | Lista el catálogo completo para administración. |
 | `POST` | `/api/admin/menu` | Crea un producto del catálogo. |
 | `PATCH` | `/api/admin/menu/[id]` | Edita un producto del catálogo. |
@@ -88,6 +88,8 @@ estado por llamadas directas.
 `/cocina` consulta únicamente el rango comprendido entre las 00:00 y las 24:00
 de `America/Bogota`, no el día UTC del servidor. Las páginas usan 12 órdenes por
 defecto y la exportación conserva las órdenes históricas en la base de datos.
+El consolidado permite elegir una fecha inicial y una fecha final; ambas están
+incluidas en el archivo CSV.
 
 ## Tratamiento de datos personales
 

@@ -1,7 +1,8 @@
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
-  getColombiaDateRange,
+  getColombiaDateRangeBetween,
   InvalidOrderDateError,
+  InvalidOrderDateRangeError,
 } from "@/lib/orders/date-range";
 import { orderRepository } from "@/lib/orders/order-repository";
 import {
@@ -67,15 +68,18 @@ export async function GET(request: Request) {
       );
     }
 
-    const date = new URL(request.url).searchParams.get("date");
-    if (!date) {
+    const searchParams = new URL(request.url).searchParams;
+    const legacyDate = searchParams.get("date");
+    const fromDate = searchParams.get("from") || legacyDate;
+    const toDate = searchParams.get("until") || legacyDate || fromDate;
+    if (!fromDate || !toDate) {
       return Response.json(
-        { error: "Debes indicar una fecha para descargar el consolidado." },
+        { error: "Debes indicar las fechas desde y hasta para descargar el consolidado." },
         { status: 400, headers: noStoreHeaders }
       );
     }
 
-    const { from, to } = getColombiaDateRange(date);
+    const { from, to } = getColombiaDateRangeBetween(fromDate, toDate);
     const result = await orderRepository.list({
       from,
       to,
@@ -89,18 +93,26 @@ export async function GET(request: Request) {
       headers: {
         ...noStoreHeaders,
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="ordenes-${date}.csv"`,
+        "Content-Disposition": `attachment; filename="ordenes-${fromDate}-a-${toDate}.csv"`,
       },
     });
   } catch (error) {
     if (
       error instanceof KitchenAuthConfigError ||
       error instanceof DatabaseNotConfiguredError ||
-      error instanceof InvalidOrderDateError
+      error instanceof InvalidOrderDateError ||
+      error instanceof InvalidOrderDateRangeError
     ) {
       return Response.json(
         { error: error.message },
-        { status: error instanceof InvalidOrderDateError ? 400 : 503, headers: noStoreHeaders }
+        {
+          status:
+            error instanceof InvalidOrderDateError ||
+            error instanceof InvalidOrderDateRangeError
+              ? 400
+              : 503,
+          headers: noStoreHeaders,
+        }
       );
     }
 
@@ -111,4 +123,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

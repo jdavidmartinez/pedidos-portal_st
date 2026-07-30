@@ -7,6 +7,13 @@ export class InvalidOrderDateError extends Error {
   }
 }
 
+export class InvalidOrderDateRangeError extends Error {
+  constructor() {
+    super("La fecha inicial no puede ser posterior a la fecha final.");
+    this.name = "InvalidOrderDateRangeError";
+  }
+}
+
 function getDateParts(date: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: COLOMBIA_TIME_ZONE,
@@ -47,3 +54,13 @@ export function getColombiaDateRange(value: string) {
   return { from, to };
 }
 
+export function getColombiaDateRangeBetween(fromValue: string, toValue: string) {
+  const from = getColombiaDateRange(fromValue).from;
+  const to = getColombiaDateRange(toValue).to;
+
+  if (fromValue > toValue) {
+    throw new InvalidOrderDateRangeError();
+  }
+
+  return { from, to };
+}

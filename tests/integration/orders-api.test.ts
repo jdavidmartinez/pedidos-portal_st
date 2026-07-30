@@ -211,9 +211,11 @@ describe("orders API against Neon", () => {
     expect(patchBody.order.status).toBe("preparing");
   });
 
-  it("exporta el consolidado CSV de la fecha solicitada", async () => {
+  it("exporta el consolidado CSV del rango solicitado", async () => {
     const response = await exportOrders(
-      new Request(`http://test.local/api/orders/export?date=${getTodayInColombia()}`)
+      new Request(
+        `http://test.local/api/orders/export?from=${getTodayInColombia()}&until=${getTodayInColombia()}`
+      )
     );
     const csv = await response.text();
 

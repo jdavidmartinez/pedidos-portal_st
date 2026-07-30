@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   getColombiaDateRange,
+  getColombiaDateRangeBetween,
   InvalidOrderDateError,
+  InvalidOrderDateRangeError,
 } from "@/lib/orders/date-range";
 
 describe("getColombiaDateRange", () => {
@@ -19,5 +21,18 @@ describe("getColombiaDateRange", () => {
     expect(() => getColombiaDateRange("2026-02-30")).toThrow(
       InvalidOrderDateError
     );
+  });
+
+  it("convierte un rango inclusivo de fechas de Colombia", () => {
+    const { from, to } = getColombiaDateRangeBetween("2026-07-29", "2026-07-31");
+
+    expect(from.toISOString()).toBe("2026-07-29T05:00:00.000Z");
+    expect(to.toISOString()).toBe("2026-08-01T05:00:00.000Z");
+  });
+
+  it("rechaza un rango cuya fecha inicial es posterior", () => {
+    expect(() =>
+      getColombiaDateRangeBetween("2026-07-31", "2026-07-29")
+    ).toThrow(InvalidOrderDateRangeError);
   });
 });
