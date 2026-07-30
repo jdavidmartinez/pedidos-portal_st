@@ -78,6 +78,13 @@ Las respuestas usan `Cache-Control: no-store`. `GET /api/orders`, `GET
 /api/orders/[id]` requieren la sesión autenticada de cocina; `POST /api/orders`
 permanece público para los clientes.
 
+Antes de aceptar, preparar o despachar una orden, cocina debe guardar un costo
+de domicilio definido, que puede ser `$0` cuando no tiene costo. Una orden puede
+rechazarse sin domicilio. No se permiten valores negativos. La interfaz exige
+el valor para las acciones que continúan el flujo y lo muestra con formato de
+pesos colombianos; la API también aplica esta regla para evitar cambios de
+estado por llamadas directas.
+
 `/cocina` consulta únicamente el rango comprendido entre las 00:00 y las 24:00
 de `America/Bogota`, no el día UTC del servidor. Las páginas usan 12 órdenes por
 defecto y la exportación conserva las órdenes históricas en la base de datos.

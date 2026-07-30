@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:unit": "vitest run tests/unit",
+    "test:api": "node --env-file-if-exists=.env.test scripts/run-api-tests.mjs",
+    "db:migrate:test": "node --env-file-if-exists=.env.test scripts/migrate-test-db.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
@@ -26,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

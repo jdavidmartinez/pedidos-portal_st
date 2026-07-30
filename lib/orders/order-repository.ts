@@ -35,6 +35,7 @@ export interface OrderListResult {
 
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
+export class MissingDeliveryFeeError extends Error {}
 export class InvalidOrderItemError extends Error {}
 export class InvalidCustomerPhoneError extends Error {}
 
@@ -284,6 +285,21 @@ class PostgresOrderRepository implements OrderRepository {
     }
 
     const current = currentRows[0] as unknown as CurrentOrderRow;
+
+    if (
+      input.status &&
+      input.status !== current.status &&
+      input.status !== "rejected"
+    ) {
+      const effectiveDeliveryFee =
+        input.deliveryFee ??
+        (current.delivery_fee === null ? null : toNumber(current.delivery_fee));
+      if (effectiveDeliveryFee === null || effectiveDeliveryFee < 0) {
+        throw new MissingDeliveryFeeError(
+          "Debes registrar un costo de domicilio igual o mayor que $0 antes de cambiar el estado."
+        );
+      }
+    }
 
     if (input.status && input.status !== current.status) {
       if (!allowedTransitions[current.status].includes(input.status)) {

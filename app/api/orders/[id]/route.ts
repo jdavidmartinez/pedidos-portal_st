@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   InvalidOrderTransitionError,
+  MissingDeliveryFeeError,
   OrderNotFoundError,
   orderRepository,
 } from "@/lib/orders/order-repository";
@@ -58,6 +59,13 @@ export async function PATCH(
       return Response.json(
         { error: error.message },
         { status: 409, headers: noStoreHeaders }
+      );
+    }
+
+    if (error instanceof MissingDeliveryFeeError) {
+      return Response.json(
+        { error: error.message },
+        { status: 400, headers: noStoreHeaders }
       );
     }
 

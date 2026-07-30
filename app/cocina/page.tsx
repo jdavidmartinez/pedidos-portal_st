@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  formatDeliveryFee,
+  parseDeliveryFee,
+} from "@/lib/orders/delivery-fee";
 import { buildOrderWhatsAppUrl } from "@/lib/orders/whatsapp-link";
 import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order, OrderStatus, UpdateOrderInput } from "@/types/order";
@@ -120,7 +124,7 @@ interface OrderCardProps {
   order: Order;
   now: number;
   updating: boolean;
-  onUpdate: (id: string, input: UpdateOrderInput) => Promise<void>;
+  onUpdate: (id: string, input: UpdateOrderInput) => Promise<Order | null>;
 }
 
 interface OrdersPagination {
@@ -133,22 +137,21 @@ interface OrdersPagination {
 
 function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
   const [deliveryFee, setDeliveryFee] = useState(
-    order.deliveryFee === null ? "" : String(order.deliveryFee)
+    formatDeliveryFee(order.deliveryFee)
   );
   const [deliveryError, setDeliveryError] = useState("");
+  const [deliveryModalMessage, setDeliveryModalMessage] = useState<string | null>(
+    null
+  );
 
-  const parsedDeliveryFee = Number(deliveryFee);
-  const numericDeliveryFee =
-    deliveryFee.trim() === "" ||
-    !Number.isFinite(parsedDeliveryFee) ||
-    parsedDeliveryFee < 0
-      ? null
-      : Math.round(parsedDeliveryFee);
+  const numericDeliveryFee = parseDeliveryFee(deliveryFee);
   const whatsappUrl = useMemo(
     () => buildOrderWhatsAppUrl(order, order.deliveryFee),
     [order]
   );
-  const whatsappDisabled = order.status === "dispatched";
+  const whatsappDisabled =
+    order.status === "dispatched" || order.status === "rejected";
+  const deliveryActionBlocked = order.deliveryFee === null || order.deliveryFee < 0;
   const isFinal = order.status === "dispatched" || order.status === "rejected";
   const primaryAction = PRIMARY_ACTIONS[order.status];
   const statusColor = STATUS_COLORS[order.status];
@@ -160,7 +163,33 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
     }
 
     setDeliveryError("");
-    await onUpdate(order.id, { deliveryFee: numericDeliveryFee });
+    const updatedOrder = await onUpdate(order.id, { deliveryFee: numericDeliveryFee });
+    if (updatedOrder) setDeliveryFee(formatDeliveryFee(updatedOrder.deliveryFee));
+  };
+
+  const requireDeliveryFee = () => {
+    if (!deliveryActionBlocked) return true;
+
+    const message =
+      order.deliveryFee === null
+        ? "Falta registrar el valor del domicilio. Escribe el valor y pulsa Guardar."
+        : "El costo del domicilio no puede ser negativo.";
+    setDeliveryError(message);
+    setDeliveryModalMessage(message);
+    return false;
+  };
+
+  const handleStatusAction = async (status: OrderStatus) => {
+    if (status !== "rejected" && !requireDeliveryFee()) return;
+
+    const updatedOrder = await onUpdate(order.id, { status });
+    if (updatedOrder && status === "dispatched") {
+      window.location.href = buildOrderWhatsAppUrl(
+        updatedOrder,
+        updatedOrder.deliveryFee,
+        "dispatched"
+      );
+    }
   };
 
   return (
@@ -207,6 +236,13 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           <div className="flex flex-wrap items-center gap-3">
             <a
               href={whatsappUrl}
+              aria-disabled={whatsappDisabled}
+              tabIndex={whatsappDisabled ? -1 : undefined}
+              onClick={(event) => {
+                if (whatsappDisabled || !requireDeliveryFee()) {
+                  event.preventDefault();
+                }
+              }}
               className="inline-flex items-center gap-2 font-bold text-emerald-300 underline decoration-emerald-400/50 underline-offset-4 hover:text-emerald-200"
             >
               WhatsApp +{order.customer.phone}
@@ -215,14 +251,17 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
               href={whatsappUrl}
               aria-label={
                 whatsappDisabled
-                  ? `Pedido ${formatOrderNumber(order.number)} despachado`
+                  ? `Pedido ${formatOrderNumber(order.number)} ${
+                      order.status === "rejected" ? "rechazado" : "despachado"
+                    }`
                   : `Enviar pedido ${formatOrderNumber(order.number)} por WhatsApp`
               }
               aria-disabled={whatsappDisabled}
               tabIndex={whatsappDisabled ? -1 : undefined}
               onClick={(event) => {
                 event.preventDefault();
-                if (!whatsappDisabled) window.location.href = whatsappUrl;
+                if (whatsappDisabled || !requireDeliveryFee()) return;
+                window.location.href = whatsappUrl;
               }}
               style={{
                 backgroundColor: "#25D366",
@@ -298,21 +337,21 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           <div className="flex gap-2">
             <input
               id={`delivery-${order.id}`}
-              type="number"
+              type="text"
               inputMode="numeric"
-              min="0"
-              step="500"
               value={deliveryFee}
-              onChange={(event) => setDeliveryFee(event.target.value)}
+              onChange={(event) =>
+                setDeliveryFee(formatDeliveryFee(event.target.value))
+              }
               disabled={isFinal || updating}
-              placeholder="Ej. 5000"
+              placeholder="$0"
               className="min-w-0 flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2.5 text-sm text-white outline-none focus:border-[#B03336] disabled:cursor-not-allowed disabled:opacity-50"
             />
             <button
               type="button"
               onClick={saveDeliveryFee}
               disabled={isFinal || updating}
-              className="rounded-lg border border-white/20 px-3 py-2.5 text-[11px] font-black uppercase text-white transition hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-white/20 px-3 py-2.5 text-[11px] font-black uppercase text-white transition duration-200 hover:-translate-y-0.5 hover:border-[#facc15] hover:bg-[#facc15]/10 hover:text-[#facc15] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Guardar
             </button>
@@ -342,14 +381,14 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           <button
             type="button"
             disabled={updating}
-            onClick={() =>
-              onUpdate(order.id, { status: primaryAction.status })
-            }
+            onClick={() => void handleStatusAction(primaryAction.status)}
             className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border px-4 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-disabled={deliveryActionBlocked}
             style={{
               backgroundColor: primaryAction.backgroundColor,
               borderColor: primaryAction.borderColor,
               boxShadow: `0 10px 24px ${statusColor.surface}`,
+              opacity: deliveryActionBlocked ? 0.55 : 1,
             }}
           >
             {primaryAction.label}
@@ -357,7 +396,7 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           <button
             type="button"
             disabled={updating}
-            onClick={() => onUpdate(order.id, { status: "rejected" })}
+            onClick={() => void handleStatusAction("rejected")}
             className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-[11px] font-black uppercase tracking-wider transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               borderColor: "#f87171",
@@ -367,6 +406,59 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           >
             Rechazar
           </button>
+        </div>
+      )}
+
+      {deliveryModalMessage && (
+        <div
+          role="presentation"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDeliveryModalMessage(null);
+            }
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`delivery-modal-title-${order.id}`}
+            className="w-full max-w-md rounded-2xl border-2 border-[#B03336] bg-[#201E1E] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#facc15]">
+                  Orden {formatOrderNumber(order.number)}
+                </p>
+                <h2
+                  id={`delivery-modal-title-${order.id}`}
+                  className="mt-1 text-xl font-black uppercase text-white"
+                >
+                  Falta el domicilio
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Cerrar aviso"
+                onClick={() => setDeliveryModalMessage(null)}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-lg font-bold text-white/70 transition hover:border-[#facc15] hover:text-[#facc15]"
+              >
+                ×
+              </button>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-white/80">
+              {deliveryModalMessage}
+            </p>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDeliveryModalMessage(null)}
+                className="rounded-lg border border-[#facc15] bg-[#facc15]/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#facc15] transition hover:bg-[#facc15] hover:text-[#201E1E]"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </article>
@@ -502,7 +594,7 @@ export default function KitchenPage() {
 
       if (response.status === 401) {
         window.location.replace("/cocina/login");
-        return;
+        return null;
       }
 
       if (!response.ok || !payload.order) {
@@ -513,12 +605,14 @@ export default function KitchenPage() {
         current.map((order) => (order.id === id ? payload.order! : order))
       );
       setError("");
+      return payload.order;
     } catch (updateError) {
       setError(
         updateError instanceof Error
           ? updateError.message
           : "No fue posible actualizar la orden."
       );
+      return null;
     } finally {
       setUpdatingIds((current) => {
         const next = new Set(current);

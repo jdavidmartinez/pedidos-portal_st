@@ -439,7 +439,13 @@ export default function LandingMenuPage() {
               <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">
                 {orderSubmitted ? 'Pedido recibido' : isGeminiMode ? 'Asistente Gemini' : 'Confirmar pedido'}
               </span>
-              <button onClick={cerrarChat} style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-white hover:text-white text-xs bg-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-800">Cerrar</button>
+              <button
+                onClick={cerrarChat}
+                style={{ fontFamily: fontMain, fontWeight: 700 }}
+                className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs text-white transition duration-200 hover:-translate-y-0.5 hover:border-[#B03336] hover:bg-[#B03336]/20 hover:text-white hover:shadow-lg active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15]"
+              >
+                Cerrar
+              </button>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20">
@@ -500,7 +506,7 @@ export default function LandingMenuPage() {
                     <input 
                       type="text" required value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Ej. Marcela"
+                      placeholder="Tu nombre"
                       className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
                   </div>
@@ -548,7 +554,7 @@ export default function LandingMenuPage() {
                       Autorizo a Portal ST a tratar mis datos personales (nombre,
                       dirección y teléfono) para gestionar y entregar este pedido.
                       <a
-                        href="/tratamiento-datos"
+                        href="/privacidad"
                         target="_blank"
                         rel="noreferrer"
                         className="ml-1 font-bold text-[#facc15] underline underline-offset-2"
@@ -560,7 +566,7 @@ export default function LandingMenuPage() {
                   <button 
                     type="submit" disabled={cargando}
                     style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}
-                    className="w-full mt-2 text-[#FEFEFE] font-bold py-2.5 rounded-lg text-xs uppercase tracking-widest hover:opacity-90 transition-opacity"
+                    className="mt-2 w-full rounded-lg py-2.5 text-xs font-bold uppercase tracking-widest text-[#FEFEFE] transition duration-200 hover:-translate-y-0.5 hover:bg-[#c13b3e] hover:shadow-lg active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#facc15]"
                   >
                     Enviar Pedido a la Cocina
                   </button>

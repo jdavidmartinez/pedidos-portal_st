@@ -1,5 +1,7 @@
 import type { Order } from "@/types/order";
 
+export type WhatsAppMessageKind = "order" | "dispatched";
+
 const formatCOP = (value: number) =>
   new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -9,8 +11,15 @@ const formatCOP = (value: number) =>
 
 export function buildOrderWhatsAppMessage(
   order: Order,
-  deliveryFee: number | null
+  deliveryFee: number | null,
+  kind: WhatsAppMessageKind = "order"
 ) {
+  if (kind === "dispatched") {
+    return ["PORTAL ST — PEDIDO DESPACHADO", "", "Gracias por tu compra."].join(
+      "\n"
+    );
+  }
+
   const items = order.items
     .map(
       (item) =>
@@ -23,9 +32,8 @@ export function buildOrderWhatsAppMessage(
     deliveryFee === null
       ? "Pendiente del costo de domicilio"
       : formatCOP(order.subtotal + deliveryFee);
-
   return [
-    "NUEVO PEDIDO — PORTAL ST",
+    "PORTAL ST",
     "",
     `Hola ${order.customer.name}, recibimos tu pedido:`,
     "",
@@ -44,8 +52,9 @@ export function buildOrderWhatsAppMessage(
 
 export function buildOrderWhatsAppUrl(
   order: Order,
-  deliveryFee: number | null
+  deliveryFee: number | null,
+  kind: WhatsAppMessageKind = "order"
 ) {
-  const message = buildOrderWhatsAppMessage(order, deliveryFee);
+  const message = buildOrderWhatsAppMessage(order, deliveryFee, kind);
   return `whatsapp://send?phone=${order.customer.phone}&text=${encodeURIComponent(message)}`;
 }

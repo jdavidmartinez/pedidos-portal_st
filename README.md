@@ -75,10 +75,17 @@ local o URL.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
+El plan de verificación está en [docs/test-plan.md](docs/test-plan.md).
 
 ## Verificación
 
 ```bash
 npm run lint
+npm run test:unit
+npx tsc --noEmit
 npm run build
 ```
+
+Las pruebas de API contra Neon se ejecutan por separado con `npm run test:api`
+después de configurar `TEST_DATABASE_URL` en `.env.test` usando una base
+exclusiva para pruebas.
