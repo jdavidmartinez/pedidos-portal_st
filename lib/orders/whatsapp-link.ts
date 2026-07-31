@@ -31,7 +31,8 @@ export function buildOrderWhatsAppMessage(
   const totalLine =
     deliveryFee === null
       ? "Pendiente del costo de domicilio"
-      : formatCOP(order.subtotal + deliveryFee);
+      : formatCOP(order.subtotal - order.discountAmount + deliveryFee);
+  const discountedSubtotal = order.subtotal - order.discountAmount;
   return [
     "PORTAL ST",
     "",
@@ -40,6 +41,13 @@ export function buildOrderWhatsAppMessage(
     items,
     "",
     `Subtotal: ${formatCOP(order.subtotal)}`,
+    ...(order.discountAmount > 0 && order.campaign
+      ? [
+          `Campaña: ${order.campaign.name} (${order.discountPercent}%)`,
+          `Descuento: -${formatCOP(order.discountAmount)}`,
+          `Subtotal con descuento: ${formatCOP(discountedSubtotal)}`,
+        ]
+      : []),
     `Domicilio: ${deliveryLine}`,
     `Total: ${totalLine}`,
     ...(order.observations

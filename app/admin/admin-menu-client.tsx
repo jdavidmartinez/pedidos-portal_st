@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import AdminCampaignsClient from "./admin-campaigns-client";
 
 interface Product {
   id: string;
@@ -232,6 +233,8 @@ export default function AdminMenuClient({ username }: Props) {
           </div>
         </div>
       </header>
+
+      <AdminCampaignsClient />
 
       <div className="mx-auto grid max-w-[1600px] gap-5 px-4 py-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="h-fit rounded-2xl border border-white/10 bg-[#171717] p-3 lg:sticky lg:top-4">

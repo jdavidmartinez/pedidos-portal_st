@@ -22,6 +22,9 @@ const order: Order = {
     },
   ],
   subtotal: 36000,
+  discountPercent: 0,
+  discountAmount: 0,
+  campaign: null,
   deliveryFee: null,
   total: 36000,
   observations: "Sin cebolla",
@@ -47,6 +50,22 @@ describe("buildOrderWhatsAppMessage", () => {
 
     expect(message).toContain("Domicilio: costo domicilio sin definir");
     expect(message).toContain("Total: Pendiente del costo de domicilio");
+  });
+
+  it("muestra precio normal, descuento y total de campaña", () => {
+    const campaignOrder = {
+      ...order,
+      discountPercent: 10,
+      discountAmount: 3600,
+      campaign: { id: "campaign-1", name: "Martes de Portal", discountPercent: 10 },
+    };
+    const message = buildOrderWhatsAppMessage(campaignOrder, 7000);
+
+    expect(message).toContain("Subtotal: $ 36.000");
+    expect(message).toContain("Campaña: Martes de Portal (10%)");
+    expect(message).toContain("Descuento: -$ 3.600");
+    expect(message).toContain("Subtotal con descuento: $ 32.400");
+    expect(message).toContain("Total: $ 39.400");
   });
 });
 

@@ -100,6 +100,11 @@ const formatCOP = (value: number) =>
 const formatOrderNumber = (number: number) =>
   `#${String(number).padStart(4, "0")}`;
 
+function openWhatsAppUrl(url: string) {
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) window.location.assign(url);
+}
+
 function formatElapsedTime(order: Order, now: number) {
   const start = new Date(order.receivedAt).getTime();
   const end = order.completedAt ? new Date(order.completedAt).getTime() : now;
@@ -184,11 +189,11 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
 
     const updatedOrder = await onUpdate(order.id, { status });
     if (updatedOrder && status === "dispatched") {
-      window.location.href = buildOrderWhatsAppUrl(
+      openWhatsAppUrl(buildOrderWhatsAppUrl(
         updatedOrder,
         updatedOrder.deliveryFee,
         "dispatched"
-      );
+      ));
     }
   };
 
@@ -239,9 +244,9 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
               aria-disabled={whatsappDisabled}
               tabIndex={whatsappDisabled ? -1 : undefined}
               onClick={(event) => {
-                if (whatsappDisabled || !requireDeliveryFee()) {
-                  event.preventDefault();
-                }
+                event.preventDefault();
+                if (whatsappDisabled || !requireDeliveryFee()) return;
+                openWhatsAppUrl(whatsappUrl);
               }}
               className="inline-flex items-center gap-2 font-bold text-emerald-300 underline decoration-emerald-400/50 underline-offset-4 hover:text-emerald-200"
             >
@@ -261,7 +266,7 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
               onClick={(event) => {
                 event.preventDefault();
                 if (whatsappDisabled || !requireDeliveryFee()) return;
-                window.location.href = whatsappUrl;
+                openWhatsAppUrl(whatsappUrl);
               }}
               style={{
                 backgroundColor: "#25D366",
@@ -364,12 +369,18 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
         </div>
 
         <div className="flex items-end justify-between gap-3">
-          <p className="text-[11px] uppercase tracking-wider text-white/45">
-            Subtotal {formatCOP(order.subtotal)}
-          </p>
+          <div className="text-[11px] uppercase tracking-wider text-white/45">
+            <p>Subtotal {formatCOP(order.subtotal)}</p>
+            {order.discountAmount > 0 && order.campaign && (
+              <p className="mt-1 text-[#facc15]">
+                {order.campaign.name} ({order.discountPercent}%): -{formatCOP(order.discountAmount)}
+              </p>
+            )}
+          </div>
           <p className="text-xl font-black text-[#facc15]">
             {formatCOP(
-              order.subtotal +
+              order.subtotal -
+                order.discountAmount +
                 (numericDeliveryFee ?? order.deliveryFee ?? 0)
             )}
           </p>

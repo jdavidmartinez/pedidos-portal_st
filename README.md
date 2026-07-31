@@ -62,10 +62,12 @@ pedidos; la consulta y actualización de órdenes requieren autenticación.
 Las órdenes y el catálogo del menú se guardan en PostgreSQL mediante
 `DATABASE_URL`. Las migraciones, incluida la carga inicial del catálogo, se
 ejecutan con `npm run db:migrate`. La migración
-`0006_marketing_consent.sql` permanece aplicada en Neon por compatibilidad,
-pero su campo queda reservado y sin uso mientras las promociones estén fuera
-del alcance del MVP. La migración `0007_menu_comic_images.sql` asigna al
-catálogo las imágenes públicas de `public/menu-comic-images`.
+`0006_marketing_consent.sql` permanece aplicada en Neon por compatibilidad.
+La migración `0007_menu_comic_images.sql` asigna al catálogo las imágenes
+públicas de `public/menu-comic-images`. La migración `0008_campaigns.sql`
+agrega campañas de descuento y guarda una instantánea del descuento aplicado en
+cada orden. El descuento afecta únicamente el total de productos del carrito;
+el domicilio no recibe descuento.
 
 `/menu` obtiene las categorías y productos activos desde `/api/menu`; el
 `/admin` permite modificar esos registros sin editar el código de la

@@ -21,12 +21,21 @@ export interface OrderCustomer {
   phone: string;
 }
 
+export interface OrderCampaign {
+  id: string;
+  name: string;
+  discountPercent: number;
+}
+
 export interface Order {
   id: string;
   number: number;
   customer: OrderCustomer;
   items: OrderItem[];
   subtotal: number;
+  discountPercent: number;
+  discountAmount: number;
+  campaign: OrderCampaign | null;
   deliveryFee: number | null;
   total: number;
   observations: string | null;

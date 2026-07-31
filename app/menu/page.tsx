@@ -11,11 +11,17 @@ interface Mensaje {
   text: string;
 }
 
+interface MenuCampaign {
+  name: string;
+  discountPercent: number;
+}
+
 export default function LandingMenuPage() {
   const [menu, setMenu] = useState<CategoriasMenu>({});
   const [categoriaActiva, setCategoriaActiva] = useState('');
   const [menuLoading, setMenuLoading] = useState(true);
   const [menuError, setMenuError] = useState('');
+  const [campaign, setCampaign] = useState<MenuCampaign | null>(null);
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isGeminiMode, setIsGeminiMode] = useState(false);
@@ -28,7 +34,6 @@ export default function LandingMenuPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [observations, setObservations] = useState('');
-  const [dataConsentAccepted, setDataConsentAccepted] = useState(false);
   const [orderIdempotencyKey, setOrderIdempotencyKey] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -55,6 +60,7 @@ export default function LandingMenuPage() {
               imageUrl: string;
             }>;
           }>;
+          campaign?: MenuCampaign | null;
           error?: string;
         };
 
@@ -77,6 +83,7 @@ export default function LandingMenuPage() {
           }, {});
 
           setMenu(nextMenu);
+          setCampaign(payload.campaign ?? null);
           setCategoriaActiva((current) => current && nextMenu[current]
             ? current
             : Object.keys(nextMenu)[0] || '');
@@ -117,6 +124,10 @@ export default function LandingMenuPage() {
     (total, item) => total + item.quantity * item.unitPrice,
     0
   );
+  const discountAmount = campaign
+    ? Math.round((subtotal * campaign.discountPercent) / 100)
+    : 0;
+  const discountedSubtotal = subtotal - discountAmount;
 
   const cambiarCantidad = (nombre: string, incremento: number) => {
     setCantidades(prev => ({
@@ -134,7 +145,6 @@ export default function LandingMenuPage() {
       setDeliveryAddress('');
       setPhoneNumber('');
       setObservations('');
-      setDataConsentAccepted(false);
       setOrderIdempotencyKey('');
       setMensajes([]);
       setInputUsuario('');
@@ -153,7 +163,6 @@ export default function LandingMenuPage() {
     setSubmitError('');
     setMensajes([]);
     setInputUsuario('');
-    setDataConsentAccepted(false);
     setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
   };
 
@@ -163,7 +172,6 @@ export default function LandingMenuPage() {
     setIsConfirmedByAI(false);
     setOrderSubmitted(false);
     setSubmitError('');
-    setDataConsentAccepted(false);
     setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     
     const seleccionados = Object.entries(cantidades)
@@ -222,11 +230,6 @@ export default function LandingMenuPage() {
   const enviarFormularioACocina = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
-
-    if (!dataConsentAccepted) {
-      setSubmitError('Debes aceptar el tratamiento de datos personales para enviar el pedido.');
-      return;
-    }
 
     const items = Object.entries(cantidades)
       .filter(([, qty]) => qty > 0)
@@ -356,8 +359,18 @@ export default function LandingMenuPage() {
               {cantidadTotal === 0 ? 'Tu pedido está vacío' : `${cantidadTotal} ${cantidadTotal === 1 ? 'producto' : 'productos'} en tu pedido`}
             </p>
             <p style={{ fontFamily: fontSecondary }} className="text-sm font-medium text-white">
-              {cantidadTotal === 0 ? 'Selecciona productos para comenzar' : `Subtotal ${formatCOP(subtotal)}`}
+              {cantidadTotal === 0
+                ? 'Selecciona productos para comenzar'
+                : `Subtotal ${formatCOP(subtotal)}`}
             </p>
+            {cantidadTotal > 0 && campaign && discountAmount > 0 && (
+              <div className="mt-1 space-y-0.5 text-[11px] font-bold">
+                <p className="text-[#facc15]">
+                  Descuento {campaign.name} ({campaign.discountPercent}%): -{formatCOP(discountAmount)}
+                </p>
+                <p className="text-white">Total con descuento: {formatCOP(discountedSubtotal)}</p>
+              </div>
+            )}
           </div>
           <button
             onClick={abrirFormularioPedido}
@@ -489,7 +502,7 @@ export default function LandingMenuPage() {
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/70 p-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">Resumen del pedido</p>
-                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(subtotal)}</span>
+                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(discountedSubtotal)}</span>
                     </div>
                     <ul className="space-y-1 text-xs font-medium text-white">
                       {itemsSeleccionados.map((item) => (
@@ -499,6 +512,13 @@ export default function LandingMenuPage() {
                         </li>
                       ))}
                     </ul>
+                    {campaign && discountAmount > 0 && (
+                      <div className="mt-2 border-t border-neutral-800 pt-2 text-[11px] text-white">
+                        <p>Subtotal: {formatCOP(subtotal)}</p>
+                        <p className="font-bold text-[#facc15]">Campaña {campaign.name} ({campaign.discountPercent}%): -{formatCOP(discountAmount)}</p>
+                        <p className="font-bold text-white">Total productos: {formatCOP(discountedSubtotal)}</p>
+                      </div>
+                    )}
                     <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-white">El domicilio se confirma por separado con el restaurante.</p>
                   </div>
                   <div>
@@ -543,26 +563,19 @@ export default function LandingMenuPage() {
                     />
                     <p className="mt-1 text-right text-[10px] text-white">{observations.length}/500</p>
                   </div>
-                  <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white">
-                    <input
-                      type="checkbox"
-                      checked={dataConsentAccepted}
-                      onChange={(event) => setDataConsentAccepted(event.target.checked)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#B03336]"
-                    />
-                    <span>
-                      Autorizo a Portal ST a tratar mis datos personales (nombre,
-                      dirección y teléfono) para gestionar y entregar este pedido.
-                      <a
-                        href="/privacidad"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="ml-1 font-bold text-[#facc15] underline underline-offset-2"
-                      >
-                        Ver aviso de privacidad
-                      </a>
-                    </span>
-                  </label>
+                  <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white/80">
+                    Si continúas con el pedido, aceptas el tratamiento de tus datos
+                    personales (nombre, dirección y teléfono) para gestionar y
+                    entregar esta orden.
+                    <a
+                      href="/privacidad"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-1 font-bold text-[#facc15] underline underline-offset-2"
+                    >
+                      Ver aviso de privacidad
+                    </a>
+                  </p>
                   <button 
                     type="submit" disabled={cargando}
                     style={{ fontFamily: fontMain, fontWeight: 700, backgroundColor: '#B03336' }}

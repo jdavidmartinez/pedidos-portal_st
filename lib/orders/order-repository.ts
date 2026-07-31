@@ -1,8 +1,10 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { campaignRepository } from "@/lib/campaigns/campaign-repository";
 import { getSql } from "@/lib/db/neon";
 import { menuRepository } from "@/lib/menu/menu-repository";
+import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { MenuProduct } from "@/lib/menu/menu-repository";
 import type {
   CreateOrderInput,
@@ -55,6 +57,10 @@ interface OrderRow {
   customer_address: string;
   customer_phone: string;
   subtotal: number | string;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  discount_percent: number | string;
+  discount_amount: number | string;
   delivery_fee: number | string | null;
   total: number | string;
   observations: string | null;
@@ -70,6 +76,7 @@ interface CurrentOrderRow {
   status: OrderStatus;
   delivery_fee: number | string | null;
   subtotal: number | string;
+  discount_amount: number | string;
   completed_at: string | null;
 }
 
@@ -153,6 +160,16 @@ function toOrder(row: OrderRow): Order {
       };
     }),
     subtotal: toNumber(row.subtotal),
+    discountPercent: toNumber(row.discount_percent),
+    discountAmount: toNumber(row.discount_amount),
+    campaign:
+      row.campaign_id && row.campaign_name
+        ? {
+            id: row.campaign_id,
+            name: row.campaign_name,
+            discountPercent: toNumber(row.discount_percent),
+          }
+        : null,
     deliveryFee:
       row.delivery_fee === null ? null : toNumber(row.delivery_fee),
     total: toNumber(row.total),
@@ -176,6 +193,10 @@ class PostgresOrderRepository implements OrderRepository {
     const productsByName = new Map(products.map((product) => [product.name, product]));
     const items = buildItems(input, productsByName);
     const subtotal = items.reduce((total, item) => total + item.lineTotal, 0);
+    const campaign = await campaignRepository.getActiveForDate(getTodayInColombia());
+    const discountPercent = campaign?.discountPercent ?? 0;
+    const discountAmount = Math.round((subtotal * discountPercent) / 100);
+    const discountedSubtotal = subtotal - discountAmount;
     const orderId = randomUUID();
     const now = new Date().toISOString();
 
@@ -195,14 +216,16 @@ class PostgresOrderRepository implements OrderRepository {
         sql`
           INSERT INTO orders (
             id, customer_name, customer_address, customer_phone,
-            subtotal, delivery_fee, total, status,
+            subtotal, campaign_id, campaign_name, discount_percent, discount_amount,
+            delivery_fee, total, status,
             observations, idempotency_key, data_consent_at,
             data_consent_version, received_at, updated_at, completed_at
           ) VALUES (
             ${orderId}, ${input.customer.name.trim()},
             ${input.customer.address.trim()},
             ${normalizePhone(input.customer.phone)}, ${subtotal},
-            ${null}, ${subtotal}, 'received',
+            ${campaign?.id ?? null}, ${campaign?.name ?? null}, ${discountPercent},
+            ${discountAmount}, ${null}, ${discountedSubtotal}, 'received',
             ${input.observations?.trim() || null}, ${idempotencyKey},
             ${now}, ${input.dataConsentVersion}, ${now}, ${now}, ${null}
           )
@@ -238,6 +261,10 @@ class PostgresOrderRepository implements OrderRepository {
         o.customer_address,
         o.customer_phone,
         o.subtotal,
+        o.campaign_id,
+        o.campaign_name,
+        o.discount_percent,
+        o.discount_amount,
         o.delivery_fee,
         o.total,
         o.observations,
@@ -275,7 +302,7 @@ class PostgresOrderRepository implements OrderRepository {
   async update(id: string, input: UpdateOrderInput) {
     const sql = getSql();
     const currentRows = (await sql`
-      SELECT id, status, delivery_fee, subtotal, completed_at
+      SELECT id, status, delivery_fee, subtotal, discount_amount, completed_at
       FROM orders
       WHERE id = ${id}
     `) as unknown as CurrentOrderRow[];
@@ -333,7 +360,7 @@ class PostgresOrderRepository implements OrderRepository {
       SET
         status = ${nextStatus},
         delivery_fee = ${nextDeliveryFee},
-        total = subtotal + COALESCE(${nextDeliveryFee}, 0),
+        total = subtotal - discount_amount + COALESCE(${nextDeliveryFee}, 0),
         updated_at = ${now},
         completed_at = ${completedAt}
       WHERE id = ${id} AND status = ${current.status}
@@ -359,6 +386,10 @@ class PostgresOrderRepository implements OrderRepository {
         o.customer_address,
         o.customer_phone,
         o.subtotal,
+        o.campaign_id,
+        o.campaign_name,
+        o.discount_percent,
+        o.discount_amount,
         o.delivery_fee,
         o.total,
         o.observations,
@@ -400,6 +431,10 @@ class PostgresOrderRepository implements OrderRepository {
         o.customer_address,
         o.customer_phone,
         o.subtotal,
+        o.campaign_id,
+        o.campaign_name,
+        o.discount_percent,
+        o.discount_amount,
         o.delivery_fee,
         o.total,
         o.observations,

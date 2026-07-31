@@ -33,11 +33,20 @@ Una orden contiene:
 - clave de idempotencia para evitar duplicados por reintentos;
 - productos, cantidades, precios unitarios y totales por línea;
 - subtotal, domicilio y total;
+- campaña aplicada (si existe), porcentaje, descuento y subtotal descontado;
 - estado;
 - fecha de recepción, última actualización y finalización.
 
 El navegador no decide los precios. Solo envía nombres y cantidades; el servidor
 valida cada producto activo en `menu_products` y calcula los valores canónicos.
+
+Una campaña activa se selecciona por la fecha local de Colombia al crear la
+orden. Para el MVP se aplica a todos los productos del pedido, redondeando el
+descuento al peso. Los precios de las tarjetas del menú y de cada línea de la
+comanda permanecen completos; el descuento se muestra únicamente en el resumen
+del carrito, la comanda, el consolidado y el mensaje de WhatsApp. El costo de
+domicilio nunca se descuenta. Solo puede existir una campaña activa por rango
+de fechas superpuesto.
 
 El navegador envía una clave `Idempotency-Key` por intento de pedido. Si la
 misma petición se repite con la misma clave, la API devuelve la orden ya creada
@@ -64,7 +73,7 @@ la orden es despachada o rechazada.
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| `GET` | `/api/menu` | Devuelve las categorías y productos activos para `/menu`. |
+| `GET` | `/api/menu` | Devuelve las categorías, productos activos y campaña vigente para `/menu`. |
 | `GET` | `/api/orders` | Lista las órdenes de una fecha, paginadas; por defecto usa el día actual en `America/Bogota`. |
 | `POST` | `/api/orders` | Valida y crea una orden. |
 | `PATCH` | `/api/orders/[id]` | Actualiza estado o costo de domicilio. |
@@ -72,6 +81,10 @@ la orden es despachada o rechazada.
 | `GET` | `/api/admin/menu` | Lista el catálogo completo para administración. |
 | `POST` | `/api/admin/menu` | Crea un producto del catálogo. |
 | `PATCH` | `/api/admin/menu/[id]` | Edita un producto del catálogo. |
+| `GET` | `/api/admin/campaigns` | Lista las campañas configuradas. |
+| `POST` | `/api/admin/campaigns` | Crea una campaña de descuento. |
+| `PATCH` | `/api/admin/campaigns/[id]` | Edita una campaña. |
+| `DELETE` | `/api/admin/campaigns/[id]` | Borra una campaña del panel; los pedidos conservan su instantánea del descuento. |
 
 Las respuestas usan `Cache-Control: no-store`. `GET /api/orders`, `GET
 /api/orders/export` y `PATCH
@@ -93,8 +106,8 @@ incluidas en el archivo CSV.
 
 ## Tratamiento de datos personales
 
-Antes de enviar una orden, el cliente debe aceptar el aviso disponible en
-`/tratamiento-datos`. La autorización se guarda con la orden mediante
+Al continuar con el pedido, el cliente acepta el aviso disponible en
+`/tratamiento-datos`, mostrado junto al botón de envío. Esta aceptación se guarda con la orden mediante
 `data_consent_at` y `data_consent_version`. El aviso operativo v3 identifica a
 Grupo Empresarial PST SAS y establece una
 conservación de 12 meses después de la última orden, salvo obligaciones legales
@@ -158,8 +171,10 @@ crean `menu_categories` y `menu_products` y
 siembra el catálogo inicial que antes estaba definido en archivos estáticos.
 La migración `0005_order_idempotency_and_data_consent.sql` agrega la clave única
 de idempotencia y los metadatos de consentimiento. La migración
-`0006_marketing_consent.sql` permanece aplicada por compatibilidad, pero su
-columna no se utiliza mientras las promociones estén fuera del alcance.
+`0006_marketing_consent.sql` permanece aplicada por compatibilidad.
+`0008_campaigns.sql` crea las campañas y guarda en cada orden una instantánea
+del descuento aplicado, para que los pedidos históricos no cambien cuando se
+edite una campaña.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;
 las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 

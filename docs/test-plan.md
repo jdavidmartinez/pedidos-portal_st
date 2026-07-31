@@ -39,7 +39,8 @@ cubre funciones puras:
 - `lib/orders/date-range.ts`: fechas válidas, fechas imposibles y rango correcto
   de `America/Bogota`.
 - `lib/orders/whatsapp-link.ts`: mensaje con y sin domicilio, observaciones,
-  total calculado y URL `whatsapp://` codificada.
+  campaña con descuento, total calculado y URL `whatsapp://` codificada.
+- `lib/campaigns/campaign-schema.ts`: porcentajes, fechas y rangos válidos.
 - `lib/menu/admin-menu-schema.ts`: precios, cantidades, imagen y categoría.
 - autenticación de cocina: credenciales correctas, credenciales incorrectas,
   firma alterada y sesión expirada.
@@ -81,6 +82,8 @@ no realiza ninguna conexión ni escritura.
 9. `GET /api/menu` devuelve únicamente categorías y productos activos con sus
    imágenes comic.
 10. `/api/admin/menu` permite editar el catálogo solo con sesión válida.
+11. `/api/admin/campaigns` permite crear y editar campañas, rechaza rangos
+    superpuestos y conserva el porcentaje aplicado en la orden.
 
 ### 4. Pruebas E2E del flujo de cliente
 
@@ -90,7 +93,8 @@ En un navegador de prueba:
 2. Agregar, aumentar y disminuir productos.
 3. Confirmar que el carrito permanece visible durante el scroll.
 4. Abrir el resumen, completar nombre, dirección, teléfono y observaciones.
-5. Verificar que sin aceptar el tratamiento de datos no se puede enviar.
+5. Verificar que el formulario muestra el aviso de tratamiento de datos y que al
+   pulsar “Enviar pedido” se registra el consentimiento con la versión vigente.
 6. Enviar una orden y confirmar que el carrito se limpia al cerrar el flujo.
 7. Recargar `/menu` y comprobar que el catálogo se mantiene desde Neon.
 
@@ -108,6 +112,8 @@ En un navegador de prueba:
 - El botón de WhatsApp queda deshabilitado después de despachar.
 - `/admin` permite editar nombre, categoría, precio, cantidad, disponibilidad e
   imagen; `/menu` refleja el cambio.
+- `/admin` permite crear una campaña, y `/menu` muestra el descuento solo en el
+  resumen del carrito; las tarjetas conservan sus precios normales.
 
 ## Smoke test de producción
 

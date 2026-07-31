@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { campaignSchema } from "@/lib/campaigns/campaign-schema";
+
+describe("campaignSchema", () => {
+  it("acepta una campaña vigente con descuento entero", () => {
+    expect(campaignSchema.parse({
+      name: "Martes de Portal",
+      discountPercent: 5,
+      startsOn: "2026-07-30",
+      endsOn: "2026-07-31",
+      active: true,
+    }).discountPercent).toBe(5);
+  });
+
+  it("rechaza porcentajes fuera de rango y fechas inválidas", () => {
+    expect(() => campaignSchema.parse({
+      name: "Campaña inválida",
+      discountPercent: 101,
+      startsOn: "2026-02-30",
+      endsOn: "2026-07-29",
+      active: true,
+    })).toThrow();
+  });
+
+  it("rechaza un rango invertido", () => {
+    expect(() => campaignSchema.parse({
+      name: "Campaña invertida",
+      discountPercent: 10,
+      startsOn: "2026-07-31",
+      endsOn: "2026-07-30",
+      active: true,
+    })).toThrow();
+  });
+});
