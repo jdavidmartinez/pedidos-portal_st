@@ -2,6 +2,8 @@ import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   InvalidOrderTransitionError,
+  InvalidOrderItemError,
+  InvalidCustomerPhoneError,
   MissingDeliveryFeeError,
   OrderNotFoundError,
   orderRepository,
@@ -63,6 +65,16 @@ export async function PATCH(
     }
 
     if (error instanceof MissingDeliveryFeeError) {
+      return Response.json(
+        { error: error.message },
+        { status: 400, headers: noStoreHeaders }
+      );
+    }
+
+    if (
+      error instanceof InvalidOrderItemError ||
+      error instanceof InvalidCustomerPhoneError
+    ) {
       return Response.json(
         { error: error.message },
         { status: 400, headers: noStoreHeaders }

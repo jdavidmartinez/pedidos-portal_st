@@ -9,6 +9,7 @@ import {
 import { buildOrderWhatsAppUrl } from "@/lib/orders/whatsapp-link";
 import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order, OrderStatus, UpdateOrderInput } from "@/types/order";
+import type { MenuProduct } from "@/lib/menu/menu-repository";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   received: "Recibida",
@@ -130,6 +131,7 @@ interface OrderCardProps {
   now: number;
   updating: boolean;
   onUpdate: (id: string, input: UpdateOrderInput) => Promise<Order | null>;
+  menuProducts: MenuProduct[];
 }
 
 interface OrdersPagination {
@@ -140,7 +142,7 @@ interface OrdersPagination {
   hasNextPage: boolean;
 }
 
-function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
+function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardProps) {
   const [deliveryFee, setDeliveryFee] = useState(
     formatDeliveryFee(order.deliveryFee)
   );
@@ -148,6 +150,14 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
   const [deliveryModalMessage, setDeliveryModalMessage] = useState<string | null>(
     null
   );
+  const [editing, setEditing] = useState(false);
+  const [editCustomer, setEditCustomer] = useState(order.customer);
+  const [editObservations, setEditObservations] = useState(order.observations ?? "");
+  const [editReason, setEditReason] = useState("");
+  const [editItems, setEditItems] = useState<Record<string, number>>(() =>
+    Object.fromEntries(order.items.map((item) => [item.name, item.quantity]))
+  );
+  const [editError, setEditError] = useState("");
 
   const numericDeliveryFee = parseDeliveryFee(deliveryFee);
   const whatsappUrl = useMemo(
@@ -194,6 +204,29 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
         updatedOrder.deliveryFee,
         "dispatched"
       ));
+    }
+  };
+
+  const saveOrderEdit = async () => {
+    const items = Object.entries(editItems)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([name, quantity]) => ({ name, quantity }));
+
+    if (items.length === 0) {
+      setEditError("La orden debe conservar al menos un producto.");
+      return;
+    }
+    setEditError("");
+    setEditing(false);
+    const updated = await onUpdate(order.id, {
+      customer: editCustomer,
+      items,
+      observations: editObservations.trim() || null,
+      editReason: editReason.trim() || undefined,
+    });
+    if (!updated) {
+      setEditing(true);
+      setEditError("No fue posible guardar la corrección. Inténtalo nuevamente.");
     }
   };
 
@@ -300,7 +333,7 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           {order.observations && (
             <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2">
               <p className="text-[10px] font-black uppercase tracking-wider text-amber-200/75">
-                Observaciones
+                Observaciones de la edición del pedido
               </p>
               <p className="mt-1 whitespace-pre-line text-xs text-amber-100">
                 {order.observations}
@@ -389,21 +422,33 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
 
       {primaryAction && (
         <div className="mt-4 grid gap-2">
-          <button
-            type="button"
-            disabled={updating}
-            onClick={() => void handleStatusAction(primaryAction.status)}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border px-4 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-disabled={deliveryActionBlocked}
-            style={{
-              backgroundColor: primaryAction.backgroundColor,
-              borderColor: primaryAction.borderColor,
-              boxShadow: `0 10px 24px ${statusColor.surface}`,
-              opacity: deliveryActionBlocked ? 0.55 : 1,
-            }}
-          >
-            {primaryAction.label}
-          </button>
+          <div className={order.status === "received" ? "grid grid-cols-2 gap-2" : "grid"}>
+            <button
+              type="button"
+              disabled={updating}
+              onClick={() => void handleStatusAction(primaryAction.status)}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border px-3 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-disabled={deliveryActionBlocked}
+              style={{
+                backgroundColor: primaryAction.backgroundColor,
+                borderColor: primaryAction.borderColor,
+                boxShadow: `0 10px 24px ${statusColor.surface}`,
+                opacity: deliveryActionBlocked ? 0.55 : 1,
+              }}
+            >
+              {primaryAction.label}
+            </button>
+            {order.status === "received" && (
+              <button
+                type="button"
+                disabled={updating}
+                onClick={() => setEditing(true)}
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#facc15] bg-[#facc15]/10 px-3 py-3 text-xs font-black uppercase tracking-wider text-[#facc15] transition hover:bg-[#facc15] hover:text-[#201E1E] disabled:opacity-50"
+              >
+                Editar
+              </button>
+            )}
+          </div>
           <button
             type="button"
             disabled={updating}
@@ -417,6 +462,67 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
           >
             Rechazar
           </button>
+        </div>
+      )}
+
+      {editing && (
+        <div
+          role="presentation"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEditing(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`edit-order-title-${order.id}`}
+            className="mx-auto my-4 w-full max-w-2xl rounded-2xl border-2 border-[#facc15] bg-[#201E1E] p-5 shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-white/10 pb-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-[#facc15]">Orden {formatOrderNumber(order.number)}</p>
+                <h2 id={`edit-order-title-${order.id}`} className="mt-1 text-xl font-black uppercase">Corregir pedido</h2>
+              </div>
+              <button type="button" aria-label="Cerrar edición" onClick={() => setEditing(false)} className="text-2xl text-white/60">×</button>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-bold text-white/70">Cliente
+                <input value={editCustomer.name} onChange={(event) => setEditCustomer({ ...editCustomer, name: event.target.value })} className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white" />
+              </label>
+              <label className="text-xs font-bold text-white/70">Teléfono
+                <input value={editCustomer.phone} onChange={(event) => setEditCustomer({ ...editCustomer, phone: event.target.value })} className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white" />
+              </label>
+              <label className="text-xs font-bold text-white/70 sm:col-span-2">Dirección
+                <input value={editCustomer.address} onChange={(event) => setEditCustomer({ ...editCustomer, address: event.target.value })} className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white" />
+              </label>
+            </div>
+
+            <fieldset className="mt-5 border-t border-white/10 pt-4">
+              <legend className="text-xs font-black uppercase tracking-wider text-white/60">Productos</legend>
+              <div className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-1">
+                {menuProducts.map((product) => (
+                  <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs">
+                    <span>{product.name} <span className="text-white/40">{formatCOP(product.individualPrice)}</span></span>
+                    <input type="number" min="0" max="99" value={editItems[product.name] ?? 0} onChange={(event) => setEditItems({ ...editItems, [product.name]: Math.max(0, Number(event.target.value) || 0) })} className="w-16 rounded border border-white/20 bg-black/50 px-2 py-1 text-center text-white" />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className="mt-4 block text-xs font-bold text-white/70">Observaciones de la edición del pedido
+              <textarea value={editObservations} maxLength={500} onChange={(event) => setEditObservations(event.target.value)} placeholder="Describe aquí las correcciones o indicaciones actualizadas del pedido" className="mt-1 min-h-20 w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white" />
+            </label>
+            <label className="mt-3 block text-xs font-bold text-white/70">Motivo de la edición (opcional)
+              <input value={editReason} maxLength={240} onChange={(event) => setEditReason(event.target.value)} placeholder="Ej. El cliente reportó un producto incorrecto" className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-white" />
+            </label>
+            {editError && <p role="alert" className="mt-3 text-xs text-red-300">{editError}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setEditing(false)} className="rounded-lg border border-white/20 px-4 py-2 text-xs font-black uppercase">Cancelar</button>
+              <button type="button" disabled={updating} onClick={() => void saveOrderEdit()} className="rounded-lg border border-[#facc15] bg-[#facc15] px-4 py-2 text-xs font-black uppercase text-[#201E1E] disabled:opacity-50">Guardar corrección</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -478,6 +584,7 @@ function OrderCard({ order, now, updating, onUpdate }: OrderCardProps) {
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [menuProducts, setMenuProducts] = useState<MenuProduct[]>([]);
   const [authState, setAuthState] = useState<
     "checking" | "authenticated" | "unauthenticated"
   >("checking");
@@ -577,6 +684,21 @@ export default function KitchenPage() {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
+
+    void fetch("/api/menu", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          categories?: Array<{ products: MenuProduct[] }>;
+        };
+        if (response.ok && payload.categories) {
+          setMenuProducts(
+            payload.categories.flatMap((category) => category.products)
+          );
+        }
+      })
+      .catch(() =>
+        setError("No fue posible cargar el menú para editar órdenes.")
+      );
 
     const initialLoad = window.setTimeout(() => void loadOrders(), 0);
     const polling = window.setInterval(() => void loadOrders(), 4000);
@@ -794,6 +916,7 @@ export default function KitchenPage() {
                 now={now}
                 updating={updatingIds.has(order.id)}
                 onUpdate={updateOrder}
+                menuProducts={menuProducts}
               />
             ))}
           </section>

@@ -98,6 +98,13 @@ el valor para las acciones que continúan el flujo y lo muestra con formato de
 pesos colombianos; la API también aplica esta regla para evitar cambios de
 estado por llamadas directas.
 
+Mientras la orden se encuentre en estado `Recibida`, cocina puede usar **Editar**
+junto a **Aceptar en cocina** para corregir los datos del cliente, observaciones
+y productos. El motivo de la corrección es opcional. El servidor vuelve a
+validar los productos y precios vigentes, recalcula descuento y total, y guarda una instantánea anterior
+y posterior en `order_edits`. Después de aceptar, la orden deja de ser editable;
+las órdenes finalizadas nunca se reescriben.
+
 `/cocina` consulta únicamente el rango comprendido entre las 00:00 y las 24:00
 de `America/Bogota`, no el día UTC del servidor. Las páginas usan 12 órdenes por
 defecto y la exportación conserva las órdenes históricas en la base de datos.
@@ -174,7 +181,10 @@ de idempotencia y los metadatos de consentimiento. La migración
 `0006_marketing_consent.sql` permanece aplicada por compatibilidad.
 `0008_campaigns.sql` crea las campañas y guarda en cada orden una instantánea
 del descuento aplicado, para que los pedidos históricos no cambien cuando se
-edite una campaña.
+edite una campaña. `0009_order_edits.sql` conserva la auditoría de las
+correcciones realizadas desde cocina y `0010_optional_order_edit_reason.sql`
+permite omitir el motivo en instalaciones que ya habían aplicado la migración
+anterior.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;
 las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 

@@ -36,6 +36,7 @@ export default function LandingMenuPage() {
   const [observations, setObservations] = useState('');
   const [orderIdempotencyKey, setOrderIdempotencyKey] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
@@ -150,6 +151,7 @@ export default function LandingMenuPage() {
       setInputUsuario('');
       setIsConfirmedByAI(false);
       setOrderSubmitted(false);
+      setSubmittedOrder(null);
       setSubmitError('');
       setIsGeminiMode(false);
     }
@@ -160,6 +162,7 @@ export default function LandingMenuPage() {
     setIsGeminiMode(false);
     setIsConfirmedByAI(true);
     setOrderSubmitted(false);
+    setSubmittedOrder(null);
     setSubmitError('');
     setMensajes([]);
     setInputUsuario('');
@@ -171,6 +174,7 @@ export default function LandingMenuPage() {
     setIsGeminiMode(true);
     setIsConfirmedByAI(false);
     setOrderSubmitted(false);
+    setSubmittedOrder(null);
     setSubmitError('');
     setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     
@@ -267,11 +271,12 @@ export default function LandingMenuPage() {
       if (response.ok && data.order) {
         const createdOrder = data.order;
         setOrderSubmitted(true);
+        setSubmittedOrder(createdOrder);
         setMensajes(prev => [
           ...prev,
           {
             role: 'bot',
-            text: `¡Excelente! Tu pedido #${String(createdOrder.number).padStart(4, '0')} fue recibido por la cocina.`,
+            text: '¡Excelente! Tu pedido fue recibido por la cocina.',
           },
         ]);
       } else {
@@ -482,6 +487,58 @@ export default function LandingMenuPage() {
                     Procesando detalles del pedido...
                   </span>
                 </div>
+              )}
+
+              {orderSubmitted && submittedOrder && (
+                <section className="rounded-xl border border-[#facc15]/50 bg-neutral-950/80 p-4 shadow-lg">
+                  <div className="flex items-start justify-between gap-3 border-b border-neutral-800 pb-3">
+                    <div>
+                      <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#facc15]">
+                        Tu pedido
+                      </p>
+                      <p style={{ fontFamily: fontSecondary }} className="mt-1 text-xs text-emerald-300">
+                        Recibido por la cocina
+                      </p>
+                    </div>
+                    <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">
+                      {formatCOP(submittedOrder.subtotal - submittedOrder.discountAmount)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 text-xs text-white/80">
+                    <p className="font-bold text-white">{submittedOrder.customer.name}</p>
+                    <p className="mt-1">{submittedOrder.customer.address}</p>
+                    <p className="mt-1">+{submittedOrder.customer.phone}</p>
+                  </div>
+
+                  <div className="mt-3 border-t border-neutral-800 pt-3">
+                    <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="mb-2 text-[11px] uppercase tracking-wider text-white/60">
+                      Resumen del pedido
+                    </p>
+                    <ul className="space-y-1.5 text-xs text-white">
+                      {submittedOrder.items.map((item) => (
+                        <li key={item.name} className="flex justify-between gap-3">
+                          <span>{item.quantity}x {item.name}</span>
+                          <span className="shrink-0 text-white/60">{formatCOP(item.lineTotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {submittedOrder.discountAmount > 0 && (
+                      <p className="mt-2 text-[11px] font-bold text-[#facc15]">
+                        Descuento: -{formatCOP(submittedOrder.discountAmount)}
+                      </p>
+                    )}
+                    {submittedOrder.observations && (
+                      <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 p-2.5">
+                        <p className="text-[10px] font-bold uppercase text-amber-200">Observaciones</p>
+                        <p className="mt-1 whitespace-pre-line text-xs text-amber-100">{submittedOrder.observations}</p>
+                      </div>
+                    )}
+                    <p className="mt-3 text-[11px] text-white/60">
+                      El valor del domicilio será confirmado por el restaurante.
+                    </p>
+                  </div>
+                </section>
               )}
 
               {(!isConfirmedByAI && (Object.values(cantidades).some(qty => qty > 0) || mensajes.length > 1) && !cargando) && (

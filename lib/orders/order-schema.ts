@@ -27,8 +27,17 @@ export const updateOrderSchema = z
   .object({
     status: z.enum(ORDER_STATUSES).optional(),
     deliveryFee: z.number().int().min(0).max(1_000_000).optional(),
+    customer: customerSchema.optional(),
+    items: z.array(orderItemSchema).min(1).max(50).optional(),
+    observations: z.string().trim().max(500).nullable().optional(),
+    editReason: z.string().trim().min(3).max(240).optional(),
   })
   .refine(
-    (value) => value.status !== undefined || value.deliveryFee !== undefined,
+    (value) =>
+      value.status !== undefined ||
+      value.deliveryFee !== undefined ||
+      value.customer !== undefined ||
+      value.items !== undefined ||
+      value.observations !== undefined,
     { message: "Debes enviar al menos un cambio." }
   );

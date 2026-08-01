@@ -147,6 +147,27 @@ describe("orders API against Neon", () => {
     expect(unauthorized.status).toBe(401);
 
     await setKitchenSession();
+    const editPatch = await patchOrder(
+      new Request("http://test.local/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: {
+            ...createdBody.order.customer,
+            address: "Calle 20 # 30-40",
+          },
+          items: [{ name: "HAMBURGUESA PORTAL", quantity: 2 }],
+          observations: "Pedido corregido",
+          editReason: "Corrección solicitada por el cliente",
+        }),
+      }),
+      { params: Promise.resolve({ id: createdBody.order.id }) }
+    );
+    const editBody = (await editPatch.json()) as { order: Order };
+    expect(editPatch.status).toBe(200);
+    expect(editBody.order.customer.address).toBe("Calle 20 # 30-40");
+    expect(editBody.order.items[0]?.quantity).toBe(2);
+
     const blockedPatch = await patchOrder(
       new Request("http://test.local/api/orders", {
         method: "PATCH",
@@ -209,6 +230,19 @@ describe("orders API against Neon", () => {
     expect(listBody.pagination.total).toBeGreaterThan(0);
     expect(patchResponse.status).toBe(200);
     expect(patchBody.order.status).toBe("preparing");
+
+    const lateEditPatch = await patchOrder(
+      new Request("http://test.local/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          observations: "Edición tardía",
+          editReason: "Intento después de aceptar",
+        }),
+      }),
+      { params: Promise.resolve({ id: createdBody.order.id }) }
+    );
+    expect(lateEditPatch.status).toBe(409);
   });
 
   it("exporta el consolidado CSV del rango solicitado", async () => {

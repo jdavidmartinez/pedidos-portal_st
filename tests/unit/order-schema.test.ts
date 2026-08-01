@@ -63,4 +63,18 @@ describe("updateOrderSchema", () => {
       true
     );
   });
+
+  it("permite corregir el contenido de la orden sin motivo", () => {
+    expect(
+      updateOrderSchema.safeParse({
+        items: [{ name: "HAMBURGUESA PORTAL", quantity: 2 }],
+      }).success
+    ).toBe(true);
+    expect(
+      updateOrderSchema.safeParse({
+        items: [{ name: "HAMBURGUESA PORTAL", quantity: 2 }],
+        editReason: "Corrección solicitada por el cliente",
+      }).success
+    ).toBe(true);
+  });
 });

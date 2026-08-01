@@ -63,4 +63,11 @@ export interface CreateOrderInput {
 export interface UpdateOrderInput {
   status?: OrderStatus;
   deliveryFee?: number;
+  customer?: OrderCustomer;
+  items?: Array<{
+    name: string;
+    quantity: number;
+  }>;
+  observations?: string | null;
+  editReason?: string;
 }

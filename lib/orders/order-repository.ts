@@ -77,6 +77,7 @@ interface CurrentOrderRow {
   delivery_fee: number | string | null;
   subtotal: number | string;
   discount_amount: number | string;
+  discount_percent: number | string;
   completed_at: string | null;
 }
 
@@ -111,7 +112,7 @@ function normalizePhone(phone: string) {
 }
 
 function buildItems(
-  input: CreateOrderInput,
+  input: Pick<CreateOrderInput, "items">,
   productsByName: Map<string, MenuProduct>
 ): OrderItem[] {
   const quantities = new Map<string, number>();
@@ -302,7 +303,8 @@ class PostgresOrderRepository implements OrderRepository {
   async update(id: string, input: UpdateOrderInput) {
     const sql = getSql();
     const currentRows = (await sql`
-      SELECT id, status, delivery_fee, subtotal, discount_amount, completed_at
+      SELECT id, status, delivery_fee, subtotal, discount_amount,
+        discount_percent, completed_at
       FROM orders
       WHERE id = ${id}
     `) as unknown as CurrentOrderRow[];
@@ -312,6 +314,118 @@ class PostgresOrderRepository implements OrderRepository {
     }
 
     const current = currentRows[0] as unknown as CurrentOrderRow;
+    const editsOrder =
+      input.customer !== undefined ||
+      input.items !== undefined ||
+      input.observations !== undefined;
+
+    if (editsOrder && current.status !== "received") {
+      throw new InvalidOrderTransitionError(
+        "Solo se puede editar una orden mientras está recibida."
+      );
+    }
+
+    if (editsOrder) {
+      const products = await menuRepository.listActiveProducts();
+      const productsByName = new Map(
+        products.map((product) => [product.name, product])
+      );
+      const items = input.items
+        ? buildItems({ items: input.items }, productsByName)
+        : null;
+      const subtotal = items
+        ? items.reduce((total, item) => total + item.lineTotal, 0)
+        : toNumber(current.subtotal);
+      const discountAmount = Math.round(
+        (subtotal * toNumber(current.discount_percent)) / 100
+      );
+      const deliveryFee =
+        current.delivery_fee === null ? 0 : toNumber(current.delivery_fee);
+      const now = new Date().toISOString();
+      const previousOrder = await this.findById(id);
+      const customer = input.customer ?? previousOrder.customer;
+      const observations =
+        input.observations === undefined
+          ? previousOrder.observations
+          : input.observations?.trim() || null;
+      const nextItems = items ?? previousOrder.items;
+      const updatedSnapshot = {
+        customer: {
+          ...customer,
+          phone: normalizePhone(customer.phone),
+        },
+        items: nextItems,
+        observations,
+        subtotal,
+        discountAmount,
+      };
+
+      const itemQueries = items
+        ? [
+            sql`
+              DELETE FROM order_items
+              WHERE order_id = ${id}
+                AND EXISTS (
+                  SELECT 1 FROM orders WHERE id = ${id} AND status = 'received'
+                )
+            `,
+            ...items.map(
+              (item, itemIndex) => sql`
+                INSERT INTO order_items (
+                  order_id, item_index, name, quantity, unit_price, line_total
+                )
+                SELECT
+                  ${id}, ${itemIndex}, ${item.name}, ${item.quantity},
+                  ${item.unitPrice}, ${item.lineTotal}
+                WHERE EXISTS (
+                  SELECT 1 FROM orders WHERE id = ${id} AND status = 'received'
+                )
+              `
+            ),
+          ]
+        : [];
+
+      const results = await sql.transaction([
+        sql`
+          UPDATE orders
+          SET customer_name = ${customer.name.trim()},
+              customer_address = ${customer.address.trim()},
+              customer_phone = ${normalizePhone(customer.phone)},
+              observations = ${observations},
+              subtotal = ${subtotal},
+              discount_amount = ${discountAmount},
+              total = ${subtotal - discountAmount + deliveryFee},
+              updated_at = ${now}
+          WHERE id = ${id} AND status = 'received'
+          RETURNING id
+        `,
+        ...itemQueries,
+      ]);
+
+      if ((results[0] as unknown as Array<{ id: string }>).length === 0) {
+        throw new InvalidOrderTransitionError(
+          "La orden cambió mientras se editaba. Actualiza la pantalla e inténtalo de nuevo."
+        );
+      }
+
+      try {
+        await sql`
+          INSERT INTO order_edits (
+            order_id, reason, previous_order, updated_order, created_at
+          ) VALUES (
+            ${id}, ${input.editReason?.trim() || null},
+            ${JSON.stringify(previousOrder)}::jsonb,
+            ${JSON.stringify(updatedSnapshot)}::jsonb, ${now}
+          )
+        `;
+      } catch (auditError) {
+        // La auditoría no debe impedir que cocina corrija la comanda si la
+        // migración todavía no se ha aplicado en este ambiente.
+        console.error("[orders] No fue posible auditar la corrección:", auditError);
+      }
+
+      return this.findById(id);
+    }
 
     if (
       input.status &&
