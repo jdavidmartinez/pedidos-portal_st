@@ -16,6 +16,62 @@ interface MenuCampaign {
   discountPercent: number;
 }
 
+interface RememberedCustomerDetails {
+  name: string;
+  address: string;
+  phone: string;
+  savedAt: number;
+}
+
+const REMEMBERED_CUSTOMER_KEY = 'portal-st:remembered-customer:v1';
+const REMEMBERED_CUSTOMER_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+
+function readRememberedCustomer(): RememberedCustomerDetails | null {
+  try {
+    const stored = window.localStorage.getItem(REMEMBERED_CUSTOMER_KEY);
+    if (!stored) return null;
+
+    const value = JSON.parse(stored) as Partial<RememberedCustomerDetails>;
+    const valid =
+      typeof value.name === 'string' &&
+      typeof value.address === 'string' &&
+      typeof value.phone === 'string' &&
+      typeof value.savedAt === 'number' &&
+      Date.now() - value.savedAt <= REMEMBERED_CUSTOMER_TTL_MS;
+
+    if (!valid) {
+      window.localStorage.removeItem(REMEMBERED_CUSTOMER_KEY);
+      return null;
+    }
+
+    return value as RememberedCustomerDetails;
+  } catch {
+    try {
+      window.localStorage.removeItem(REMEMBERED_CUSTOMER_KEY);
+    } catch {
+      // Algunos navegadores bloquean por completo el almacenamiento local.
+    }
+    return null;
+  }
+}
+
+function clearRememberedCustomer() {
+  try {
+    window.localStorage.removeItem(REMEMBERED_CUSTOMER_KEY);
+  } catch {
+    // El pedido debe seguir funcionando aunque el navegador bloquee storage.
+  }
+}
+
+function writeRememberedCustomer(value: RememberedCustomerDetails) {
+  try {
+    window.localStorage.setItem(REMEMBERED_CUSTOMER_KEY, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default function LandingMenuPage() {
   const [menu, setMenu] = useState<CategoriasMenu>({});
   const [categoriaActiva, setCategoriaActiva] = useState('');
@@ -33,11 +89,28 @@ export default function LandingMenuPage() {
   const [customerName, setCustomerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [rememberCustomer, setRememberCustomer] = useState(false);
+  const [hasRememberedCustomer, setHasRememberedCustomer] = useState(false);
   const [observations, setObservations] = useState('');
   const [orderIdempotencyKey, setOrderIdempotencyKey] = useState('');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    const remembered = readRememberedCustomer();
+    if (!remembered) return;
+
+    const loadRemembered = window.setTimeout(() => {
+      setCustomerName(remembered.name);
+      setDeliveryAddress(remembered.address);
+      setPhoneNumber(remembered.phone);
+      setRememberCustomer(true);
+      setHasRememberedCustomer(true);
+    }, 0);
+
+    return () => window.clearTimeout(loadRemembered);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,9 +215,11 @@ export default function LandingMenuPage() {
 
     if (orderSubmitted) {
       setCantidades({});
-      setCustomerName('');
-      setDeliveryAddress('');
-      setPhoneNumber('');
+      if (!rememberCustomer) {
+        setCustomerName('');
+        setDeliveryAddress('');
+        setPhoneNumber('');
+      }
       setObservations('');
       setOrderIdempotencyKey('');
       setMensajes([]);
@@ -155,6 +230,15 @@ export default function LandingMenuPage() {
       setSubmitError('');
       setIsGeminiMode(false);
     }
+  };
+
+  const forgetCustomerDetails = () => {
+    clearRememberedCustomer();
+    setRememberCustomer(false);
+    setHasRememberedCustomer(false);
+    setCustomerName('');
+    setDeliveryAddress('');
+    setPhoneNumber('');
   };
 
   const abrirFormularioPedido = () => {
@@ -270,6 +354,18 @@ export default function LandingMenuPage() {
 
       if (response.ok && data.order) {
         const createdOrder = data.order;
+        if (rememberCustomer) {
+          const remembered = writeRememberedCustomer({
+              name: customerName.trim(),
+              address: deliveryAddress.trim(),
+              phone: phoneNumber.trim(),
+              savedAt: Date.now(),
+            });
+          setHasRememberedCustomer(remembered);
+        } else {
+          clearRememberedCustomer();
+          setHasRememberedCustomer(false);
+        }
         setOrderSubmitted(true);
         setSubmittedOrder(createdOrder);
         setMensajes(prev => [
@@ -604,6 +700,29 @@ export default function LandingMenuPage() {
                       placeholder="Ej. 3213166885"
                       className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <label className="flex cursor-pointer items-start gap-3 text-[11px] leading-relaxed text-white/85">
+                      <input
+                        type="checkbox"
+                        checked={rememberCustomer}
+                        onChange={(event) => setRememberCustomer(event.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#B03336]"
+                      />
+                      <span>
+                        <strong className="block text-white">Recordar mis datos en este dispositivo</strong>
+                        Guarda nombre, dirección y teléfono en este navegador para completar más rápido futuros pedidos.
+                      </span>
+                    </label>
+                    {hasRememberedCustomer && (
+                      <button
+                        type="button"
+                        onClick={forgetCustomerDetails}
+                        className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#facc15] underline underline-offset-2"
+                      >
+                        Olvidar mis datos
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="order-observations" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">

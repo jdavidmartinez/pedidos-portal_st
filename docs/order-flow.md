@@ -120,6 +120,13 @@ Grupo Empresarial PST SAS y establece una
 conservación de 12 meses después de la última orden, salvo obligaciones legales
 aplicables.
 
+El cliente puede elegir **Recordar mis datos en este dispositivo**. Con su
+elección, nombre, dirección y teléfono se guardan durante un máximo de 12 meses
+en el almacenamiento local de ese navegador y se proponen, siempre editables,
+en pedidos posteriores. La opción no identifica al cliente en otros dispositivos
+ni constituye un inicio de sesión. **Olvidar mis datos** elimina inmediatamente
+esa copia local.
+
 ## Administración del menú
 
 `/admin` reutiliza la sesión autenticada de cocina durante el MVP. Permite
