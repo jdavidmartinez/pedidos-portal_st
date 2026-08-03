@@ -11,7 +11,11 @@ function isValidDate(value: string) {
 export const campaignSchema = z
   .object({
     name: z.string().trim().min(2).max(100),
-    discountPercent: z.number().int().min(0).max(100),
+    productIds: z.array(z.string().trim().min(1).max(100)).min(
+      1,
+      "Selecciona al menos un producto."
+    ).max(50).transform((values) => Array.from(new Set(values))),
+    discountPercent: z.number().int().min(1).max(100),
     startsOn: z.string().regex(datePattern, "La fecha inicial no es válida."),
     endsOn: z.string().regex(datePattern, "La fecha final no es válida."),
     active: z.boolean(),

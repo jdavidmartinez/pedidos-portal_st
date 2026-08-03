@@ -33,20 +33,21 @@ Una orden contiene:
 - clave de idempotencia para evitar duplicados por reintentos;
 - productos, cantidades, precios unitarios y totales por línea;
 - subtotal, domicilio y total;
-- campaña aplicada (si existe), porcentaje, descuento y subtotal descontado;
+- instantánea histórica de campaña y descuento para órdenes creadas antes del
+  modelo de promociones informativas;
 - estado;
 - fecha de recepción, última actualización y finalización.
 
 El navegador no decide los precios. Solo envía nombres y cantidades; el servidor
 valida cada producto activo en `menu_products` y calcula los valores canónicos.
 
-Una campaña activa se selecciona por la fecha local de Colombia al crear la
-orden. Para el MVP se aplica a todos los productos del pedido, redondeando el
-descuento al peso. Los precios de las tarjetas del menú y de cada línea de la
-comanda permanecen completos; el descuento se muestra únicamente en el resumen
-del carrito, la comanda, el consolidado y el mensaje de WhatsApp. El costo de
-domicilio nunca se descuenta. Solo puede existir una campaña activa por rango
-de fechas superpuesto.
+Una promoción activa se selecciona por la fecha local de Colombia y se muestra
+en un popup al abrir `/menu`. El anuncio incluye título, productos, imagen,
+porcentaje y vigencia. Es exclusivamente informativo: el navegador y el
+servidor conservan los precios normales, la orden se guarda sin descuento y el
+mensaje de WhatsApp no menciona la promoción. El restaurante decide manualmente
+si aplica el descuento al facturar. Solo puede existir una promoción activa por
+rango de fechas superpuesto.
 
 El navegador envía una clave `Idempotency-Key` por intento de pedido. Si la
 misma petición se repite con la misma clave, la API devuelve la orden ya creada
@@ -82,9 +83,9 @@ la orden es despachada o rechazada.
 | `POST` | `/api/admin/menu` | Crea un producto del catálogo. |
 | `PATCH` | `/api/admin/menu/[id]` | Edita un producto del catálogo. |
 | `GET` | `/api/admin/campaigns` | Lista las campañas configuradas. |
-| `POST` | `/api/admin/campaigns` | Crea una campaña de descuento. |
-| `PATCH` | `/api/admin/campaigns/[id]` | Edita una campaña. |
-| `DELETE` | `/api/admin/campaigns/[id]` | Borra una campaña del panel; los pedidos conservan su instantánea del descuento. |
+| `POST` | `/api/admin/campaigns` | Crea una promoción informativa para uno o varios productos. |
+| `PATCH` | `/api/admin/campaigns/[id]` | Edita una promoción. |
+| `DELETE` | `/api/admin/campaigns/[id]` | Borra una promoción del panel. |
 | `PATCH` | `/api/auth/password` | Cambia la contraseña del usuario autenticado después de validar la actual. |
 | `GET` | `/api/admin/users` | Lista usuarios para el panel administrativo. |
 | `PATCH` | `/api/admin/users/[id]/password` | Restablece una contraseña y revoca las sesiones del usuario. |
@@ -104,7 +105,7 @@ estado por llamadas directas.
 Mientras la orden se encuentre en estado `Recibida`, cocina puede usar **Editar**
 junto a **Aceptar en cocina** para corregir los datos del cliente, observaciones
 y productos. El motivo de la corrección es opcional. El servidor vuelve a
-validar los productos y precios vigentes, recalcula descuento y total, y guarda una instantánea anterior
+validar los productos y precios vigentes, recalcula el subtotal normal y guarda una instantánea anterior
 y posterior en `order_edits`. Después de aceptar, la orden deja de ser editable;
 las órdenes finalizadas nunca se reescriben.
 
@@ -203,14 +204,19 @@ siembra el catálogo inicial que antes estaba definido en archivos estáticos.
 La migración `0005_order_idempotency_and_data_consent.sql` agrega la clave única
 de idempotencia y los metadatos de consentimiento. La migración
 `0006_marketing_consent.sql` permanece aplicada por compatibilidad.
-`0008_campaigns.sql` crea las campañas y guarda en cada orden una instantánea
-del descuento aplicado, para que los pedidos históricos no cambien cuando se
-edite una campaña. `0009_order_edits.sql` conserva la auditoría de las
+`0008_campaigns.sql` creó las campañas y las columnas históricas de descuento
+en órdenes. `0009_order_edits.sql` conserva la auditoría de las
 correcciones realizadas desde cocina y `0010_optional_order_edit_reason.sql`
 permite omitir el motivo en instalaciones que ya habían aplicado la migración
 anterior.
 La migración `0011_role_based_auth.sql` crea usuarios con roles, sesiones
 revocables y límites compartidos de intentos de acceso.
+La migración `0012_marketing_promotions.sql` agregó el primer vínculo de
+producto y desactiva campañas anteriores que todavía no lo tengan. La migración
+`0013_promotion_products.sql` permite asociar varios productos a una misma
+promoción. Las
+columnas de descuento de órdenes se conservan únicamente por compatibilidad
+histórica.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;
 las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 

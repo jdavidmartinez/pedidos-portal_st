@@ -1,10 +1,8 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { campaignRepository } from "@/lib/campaigns/campaign-repository";
 import { getSql } from "@/lib/db/neon";
 import { menuRepository } from "@/lib/menu/menu-repository";
-import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { MenuProduct } from "@/lib/menu/menu-repository";
 import type {
   CreateOrderInput,
@@ -194,10 +192,10 @@ class PostgresOrderRepository implements OrderRepository {
     const productsByName = new Map(products.map((product) => [product.name, product]));
     const items = buildItems(input, productsByName);
     const subtotal = items.reduce((total, item) => total + item.lineTotal, 0);
-    const campaign = await campaignRepository.getActiveForDate(getTodayInColombia());
-    const discountPercent = campaign?.discountPercent ?? 0;
-    const discountAmount = Math.round((subtotal * discountPercent) / 100);
-    const discountedSubtotal = subtotal - discountAmount;
+    // Las promociones son anuncios de marketing. El restaurante decide
+    // manualmente si aplica un descuento; el servidor conserva precios normales.
+    const discountPercent = 0;
+    const discountAmount = 0;
     const orderId = randomUUID();
     const now = new Date().toISOString();
 
@@ -225,8 +223,8 @@ class PostgresOrderRepository implements OrderRepository {
             ${orderId}, ${input.customer.name.trim()},
             ${input.customer.address.trim()},
             ${normalizePhone(input.customer.phone)}, ${subtotal},
-            ${campaign?.id ?? null}, ${campaign?.name ?? null}, ${discountPercent},
-            ${discountAmount}, ${null}, ${discountedSubtotal}, 'received',
+            ${null}, ${null}, ${discountPercent},
+            ${discountAmount}, ${null}, ${subtotal}, 'received',
             ${input.observations?.trim() || null}, ${idempotencyKey},
             ${now}, ${input.dataConsentVersion}, ${now}, ${now}, ${null}
           )

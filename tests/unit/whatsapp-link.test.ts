@@ -52,7 +52,7 @@ describe("buildOrderWhatsAppMessage", () => {
     expect(message).toContain("Total: Pendiente del costo de domicilio");
   });
 
-  it("muestra precio normal, descuento y total de campaña", () => {
+  it("mantiene el mensaje y total normales aunque exista una campaña histórica", () => {
     const campaignOrder = {
       ...order,
       discountPercent: 10,
@@ -62,10 +62,9 @@ describe("buildOrderWhatsAppMessage", () => {
     const message = buildOrderWhatsAppMessage(campaignOrder, 7000);
 
     expect(message).toContain("Subtotal: $ 36.000");
-    expect(message).toContain("Campaña: Martes de Portal (10%)");
-    expect(message).toContain("Descuento: -$ 3.600");
-    expect(message).toContain("Subtotal con descuento: $ 32.400");
-    expect(message).toContain("Total: $ 39.400");
+    expect(message).not.toContain("Campaña:");
+    expect(message).not.toContain("Descuento:");
+    expect(message).toContain("Total: $ 43.000");
   });
 });
 

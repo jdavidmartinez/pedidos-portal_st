@@ -89,10 +89,10 @@ Las órdenes y el catálogo del menú se guardan en PostgreSQL mediante
 ejecutan con `npm run db:migrate`. La migración
 `0006_marketing_consent.sql` permanece aplicada en Neon por compatibilidad.
 La migración `0007_menu_comic_images.sql` asigna al catálogo las imágenes
-públicas de `public/menu-comic-images`. La migración `0008_campaigns.sql`
-agrega campañas de descuento y guarda una instantánea del descuento aplicado en
-cada orden. El descuento afecta únicamente el total de productos del carrito;
-el domicilio no recibe descuento.
+públicas de `public/menu-comic-images`. Las promociones son anuncios de
+marketing asociados a uno o varios productos y un rango de fechas. Se muestran en un popup
+al abrir `/menu`, pero no modifican precios, pedidos, facturas ni mensajes de
+WhatsApp. El restaurante decide manualmente si aplica el descuento anunciado.
 
 `/menu` obtiene las categorías y productos activos desde `/api/menu`; el
 `/admin` permite modificar esos registros sin editar el código de la

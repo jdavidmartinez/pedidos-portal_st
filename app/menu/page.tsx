@@ -12,8 +12,12 @@ interface Mensaje {
 }
 
 interface MenuCampaign {
+  id: string;
   name: string;
+  products: Array<{ id: string; name: string; imageUrl: string }>;
   discountPercent: number;
+  startsOn: string;
+  endsOn: string;
 }
 
 interface RememberedCustomerDetails {
@@ -72,12 +76,22 @@ function writeRememberedCustomer(value: RememberedCustomerDetails) {
   }
 }
 
+function formatPromotionDate(value: string) {
+  return new Intl.DateTimeFormat('es-CO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  }).format(new Date(`${value}T12:00:00-05:00`));
+}
+
 export default function LandingMenuPage() {
   const [menu, setMenu] = useState<CategoriasMenu>({});
   const [categoriaActiva, setCategoriaActiva] = useState('');
   const [menuLoading, setMenuLoading] = useState(true);
   const [menuError, setMenuError] = useState('');
   const [campaign, setCampaign] = useState<MenuCampaign | null>(null);
+  const [showCampaign, setShowCampaign] = useState(false);
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isGeminiMode, setIsGeminiMode] = useState(false);
@@ -157,7 +171,11 @@ export default function LandingMenuPage() {
           }, {});
 
           setMenu(nextMenu);
-          setCampaign(payload.campaign ?? null);
+          const activeCampaign = payload.campaign && payload.campaign.products.length > 0
+            ? payload.campaign
+            : null;
+          setCampaign(activeCampaign);
+          setShowCampaign(Boolean(activeCampaign));
           setCategoriaActiva((current) => current && nextMenu[current]
             ? current
             : Object.keys(nextMenu)[0] || '');
@@ -198,10 +216,6 @@ export default function LandingMenuPage() {
     (total, item) => total + item.quantity * item.unitPrice,
     0
   );
-  const discountAmount = campaign
-    ? Math.round((subtotal * campaign.discountPercent) / 100)
-    : 0;
-  const discountedSubtotal = subtotal - discountAmount;
 
   const cambiarCantidad = (nombre: string, incremento: number) => {
     setCantidades(prev => ({
@@ -500,14 +514,6 @@ export default function LandingMenuPage() {
                 ? 'Selecciona productos para comenzar'
                 : `Subtotal ${formatCOP(subtotal)}`}
             </p>
-            {cantidadTotal > 0 && campaign && discountAmount > 0 && (
-              <div className="mt-1 space-y-0.5 text-[11px] font-bold">
-                <p className="text-[#facc15]">
-                  Descuento {campaign.name} ({campaign.discountPercent}%): -{formatCOP(discountAmount)}
-                </p>
-                <p className="text-white">Total con descuento: {formatCOP(discountedSubtotal)}</p>
-              </div>
-            )}
           </div>
           <button
             onClick={abrirFormularioPedido}
@@ -579,6 +585,87 @@ export default function LandingMenuPage() {
         )}
       </main>
 
+      {campaign && showCampaign && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="promotion-title"
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-[#facc15]/80 bg-[#171717] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]"
+          >
+            <button
+              type="button"
+              onClick={() => setShowCampaign(false)}
+              aria-label="Cerrar promoción"
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/75 text-xl font-bold text-white transition hover:border-[#facc15] hover:text-[#facc15]"
+            >
+              ×
+            </button>
+
+            <div
+              role="img"
+              aria-label={`Productos en promoción: ${campaign.products.map((product) => product.name).join(', ')}`}
+              className="h-52 w-full bg-neutral-900 bg-cover bg-center"
+              style={{ backgroundImage: `linear-gradient(to top, rgba(23,23,23,1), rgba(23,23,23,0.05) 60%), url(${JSON.stringify(campaign.products[0]?.imageUrl ?? "")})` }}
+            />
+
+            <div className="relative -mt-10 px-6 pb-6">
+              <p
+                style={{ fontFamily: fontMain, fontWeight: 700 }}
+                className="inline-flex rounded-full border border-[#facc15] bg-[#B03336] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-white shadow-lg"
+              >
+                Promoción especial
+              </p>
+              <h2
+                id="promotion-title"
+                style={{ fontFamily: fontMain, fontWeight: 700 }}
+                className="mt-3 text-3xl uppercase leading-tight text-[#facc15]"
+              >
+                {campaign.name}
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {campaign.products.map((product) => (
+                  <span
+                    key={product.id}
+                    style={{ fontFamily: fontMain, fontWeight: 700 }}
+                    className="rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-xs uppercase text-white"
+                  >
+                    {product.name}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-5 grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-[#B03336]/60 bg-[#201E1E] p-4">
+                <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#B03336] text-center shadow-[0_10px_30px_rgba(176,51,54,0.4)]">
+                  <span style={{ fontFamily: fontMain, fontWeight: 900 }} className="text-2xl leading-none text-white">
+                    {campaign.discountPercent}%
+                  </span>
+                  <span className="mt-1 text-[9px] font-black uppercase tracking-wider text-white/85">Descuento</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#facc15]">Vigencia</p>
+                  <p style={{ fontFamily: fontSecondary }} className="mt-1 text-sm leading-relaxed text-white/85">
+                    Del {formatPromotionDate(campaign.startsOn)} al {formatPromotionDate(campaign.endsOn)}.
+                  </p>
+                </div>
+              </div>
+
+              <p style={{ fontFamily: fontSecondary }} className="mt-4 text-xs leading-relaxed text-white/60">
+                Promoción informativa. El restaurante confirmará y aplicará manualmente el descuento al facturar.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCampaign(false)}
+                style={{ fontFamily: fontMain, fontWeight: 700 }}
+                className="mt-5 w-full rounded-xl border border-[#facc15] bg-[#d97706] px-5 py-3 text-xs uppercase tracking-widest text-white transition hover:brightness-110"
+              >
+                Ver el menú
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* Terminal Modal System */}
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -633,7 +720,7 @@ export default function LandingMenuPage() {
                       </p>
                     </div>
                     <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">
-                      {formatCOP(submittedOrder.subtotal - submittedOrder.discountAmount)}
+                      {formatCOP(submittedOrder.subtotal)}
                     </span>
                   </div>
 
@@ -655,11 +742,6 @@ export default function LandingMenuPage() {
                         </li>
                       ))}
                     </ul>
-                    {submittedOrder.discountAmount > 0 && (
-                      <p className="mt-2 text-[11px] font-bold text-[#facc15]">
-                        Descuento: -{formatCOP(submittedOrder.discountAmount)}
-                      </p>
-                    )}
                     {submittedOrder.observations && (
                       <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 p-2.5">
                         <p className="text-[10px] font-bold uppercase text-amber-200">Observaciones</p>
@@ -718,7 +800,7 @@ export default function LandingMenuPage() {
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/70 p-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xs uppercase tracking-wider text-[#FEFEFE]">Resumen del pedido</p>
-                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(discountedSubtotal)}</span>
+                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-sm text-[#facc15]">{formatCOP(subtotal)}</span>
                     </div>
                     <ul className="space-y-1 text-xs font-medium text-white">
                       {itemsSeleccionados.map((item) => (
@@ -728,13 +810,6 @@ export default function LandingMenuPage() {
                         </li>
                       ))}
                     </ul>
-                    {campaign && discountAmount > 0 && (
-                      <div className="mt-2 border-t border-neutral-800 pt-2 text-[11px] text-white">
-                        <p>Subtotal: {formatCOP(subtotal)}</p>
-                        <p className="font-bold text-[#facc15]">Campaña {campaign.name} ({campaign.discountPercent}%): -{formatCOP(discountAmount)}</p>
-                        <p className="font-bold text-white">Total productos: {formatCOP(discountedSubtotal)}</p>
-                      </div>
-                    )}
                     <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-white">El domicilio se confirma por separado con el restaurante.</p>
                   </div>
                   <div>

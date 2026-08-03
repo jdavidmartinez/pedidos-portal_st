@@ -39,8 +39,8 @@ cubre funciones puras:
 - `lib/orders/date-range.ts`: fechas válidas, fechas imposibles y rango correcto
   de `America/Bogota`.
 - `lib/orders/whatsapp-link.ts`: mensaje con y sin domicilio, observaciones,
-  campaña con descuento, total calculado y URL `whatsapp://` codificada.
-- `lib/campaigns/campaign-schema.ts`: porcentajes, fechas y rangos válidos.
+  precios normales, total calculado y URL `whatsapp://` codificada.
+- `lib/campaigns/campaign-schema.ts`: uno o varios productos, porcentajes, fechas y rangos válidos.
 - `lib/menu/admin-menu-schema.ts`: precios, cantidades, imagen y categoría.
 - `lib/auth/password.ts`: hash `scrypt` con sal, contraseña correcta, contraseña
   incorrecta y formatos de hash inválidos.
@@ -82,8 +82,8 @@ no realiza ninguna conexión ni escritura.
 9. `GET /api/menu` devuelve únicamente categorías y productos activos con sus
    imágenes comic.
 10. `/api/admin/menu` permite editar el catálogo solo con sesión válida.
-11. `/api/admin/campaigns` permite crear y editar campañas, rechaza rangos
-    superpuestos y conserva el porcentaje aplicado en la orden.
+11. `/api/admin/campaigns` permite crear y editar promociones con varios productos y
+    rechaza rangos superpuestos; las órdenes conservan precios normales.
 12. Un usuario `kitchen` puede operar pedidos pero recibe `403` en las APIs de
     administración; un usuario `admin` puede usar ambas áreas.
 13. Cinco credenciales incorrectas activan el límite temporal y cerrar sesión
@@ -125,8 +125,8 @@ En un navegador de prueba:
 - El botón de WhatsApp queda deshabilitado después de despachar.
 - `/admin` permite editar nombre, categoría, precio, cantidad, disponibilidad e
   imagen; `/menu` refleja el cambio.
-- `/admin` permite crear una campaña, y `/menu` muestra el descuento solo en el
-  resumen del carrito; las tarjetas conservan sus precios normales.
+- `/admin` permite crear una promoción eligiendo varios productos, porcentaje y fechas;
+  `/menu` muestra el popup sin cambiar precios ni totales.
 
 ## Smoke test de producción
 
