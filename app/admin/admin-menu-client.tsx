@@ -228,6 +228,8 @@ export default function AdminMenuClient({ username }: Props) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <a href="/admin/usuarios" className="rounded-lg border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:border-[#facc15] hover:text-[#facc15]">Usuarios</a>
+            <a href="/cuenta" className="rounded-lg border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:border-[#facc15] hover:text-[#facc15]">Mi cuenta</a>
             <a href="/cocina" className="rounded-lg border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:border-[#facc15] hover:text-[#facc15]">Volver a cocina</a>
             <button type="button" onClick={() => void logout()} className="rounded-lg border border-red-300/40 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-red-200 transition hover:bg-red-400/10">Cerrar sesión</button>
           </div>

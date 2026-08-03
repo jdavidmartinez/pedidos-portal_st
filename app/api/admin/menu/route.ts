@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   getKitchenSession,
+  hasRole,
   KitchenAuthConfigError,
 } from "@/lib/auth/kitchen-auth";
 import { adminMenuProductSchema } from "@/lib/menu/admin-menu-schema";
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
 async function requireKitchenSession() {
-  return Boolean(await getKitchenSession());
+  return hasRole(await getKitchenSession(), ["admin"]);
 }
 
 function isUniqueViolation(error: unknown) {
@@ -25,8 +26,8 @@ export async function GET() {
   try {
     if (!(await requireKitchenSession())) {
       return Response.json(
-        { error: "Debes iniciar sesión para administrar el menú." },
-        { status: 401, headers: noStoreHeaders }
+        { error: "Necesitas permisos de administrador para administrar el menú." },
+        { status: 403, headers: noStoreHeaders }
       );
     }
 
@@ -54,8 +55,8 @@ export async function POST(request: Request) {
   try {
     if (!(await requireKitchenSession())) {
       return Response.json(
-        { error: "Debes iniciar sesión para administrar el menú." },
-        { status: 401, headers: noStoreHeaders }
+        { error: "Necesitas permisos de administrador para administrar el menú." },
+        { status: 403, headers: noStoreHeaders }
       );
     }
 

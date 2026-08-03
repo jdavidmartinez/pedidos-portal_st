@@ -42,11 +42,11 @@ cubre funciones puras:
   campaña con descuento, total calculado y URL `whatsapp://` codificada.
 - `lib/campaigns/campaign-schema.ts`: porcentajes, fechas y rangos válidos.
 - `lib/menu/admin-menu-schema.ts`: precios, cantidades, imagen y categoría.
-- autenticación de cocina: credenciales correctas, credenciales incorrectas,
-  firma alterada y sesión expirada.
+- `lib/auth/password.ts`: hash `scrypt` con sal, contraseña correcta, contraseña
+  incorrecta y formatos de hash inválidos.
 
-La autenticación queda como siguiente caso unitario porque depende de APIs de
-cookies de Next.js.
+La persistencia de usuarios, sesiones, roles y límites de acceso se verifica en
+la capa de integración porque depende de PostgreSQL y de las cookies de Next.js.
 
 ### 3. Pruebas de API e integración con Neon
 
@@ -84,6 +84,14 @@ no realiza ninguna conexión ni escritura.
 10. `/api/admin/menu` permite editar el catálogo solo con sesión válida.
 11. `/api/admin/campaigns` permite crear y editar campañas, rechaza rangos
     superpuestos y conserva el porcentaje aplicado en la orden.
+12. Un usuario `kitchen` puede operar pedidos pero recibe `403` en las APIs de
+    administración; un usuario `admin` puede usar ambas áreas.
+13. Cinco credenciales incorrectas activan el límite temporal y cerrar sesión
+    revoca el token en PostgreSQL.
+14. El cambio propio exige la contraseña actual, rechaza confirmaciones distintas
+    y conserva solo una nueva sesión para el dispositivo actual.
+15. El restablecimiento administrativo rechaza usuarios `kitchen`, actualiza el
+    hash y revoca todas las sesiones del usuario afectado.
 
 ### 4. Pruebas E2E del flujo de cliente
 
@@ -101,7 +109,12 @@ En un navegador de prueba:
 ### 5. Pruebas E2E de cocina y administración
 
 - `/cocina` redirige al login sin sesión.
-- Usuario correcto entra y usuario incorrecto no entra.
+- Usuarios `kitchen` y `admin` correctos entran y una contraseña incorrecta no.
+- Un usuario `kitchen` es redirigido fuera de `/admin`; un `admin` puede abrir
+  `/admin` y `/cocina`.
+- `/cuenta` permite cambiar la contraseña y luego iniciar sesión con la nueva.
+- `/admin/usuarios` permite restablecer una contraseña; las sesiones anteriores
+  dejan de funcionar inmediatamente.
 - Se muestran únicamente las órdenes del día.
 - Paginación y exportación por fecha funcionan.
 - Los estados cambian en orden: recibida, aceptada, en proceso,

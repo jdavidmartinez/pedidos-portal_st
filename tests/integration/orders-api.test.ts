@@ -1,6 +1,8 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { neon } from "@neondatabase/serverless";
+import { randomUUID } from "node:crypto";
 import { authenticateKitchenUser } from "@/lib/auth/kitchen-auth";
+import { hashPassword } from "@/lib/auth/password";
 import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order } from "@/types/order";
 
@@ -25,6 +27,8 @@ if (!databaseUrl) {
 const sql = neon(databaseUrl);
 const testCustomerPrefix = `API TEST ${Date.now()}`;
 const testPhone = "3000000001";
+const testUsername = `api-kitchen-${Date.now()}`;
+const testPassword = "API-test-password-123!";
 
 function orderPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -56,11 +60,16 @@ async function postJson(payload: unknown, key: string) {
 
 async function setKitchenSession() {
   process.env.AUTH_SECRET = process.env.AUTH_SECRET || "api-test-secret";
-  authState.token = authenticateKitchenUser("cocina", "portalst") ?? undefined;
+  const result = await authenticateKitchenUser(testUsername, testPassword, "api-test");
+  authState.token = result.token;
   expect(authState.token).toBeTruthy();
 }
 
 beforeAll(async () => {
+  await sql`
+    INSERT INTO auth_users (id, username, password_hash, role)
+    VALUES (${randomUUID()}, ${testUsername}, ${await hashPassword(testPassword)}, 'kitchen')
+  `;
   await sql.query(
     "DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE customer_name LIKE 'API TEST %')",
     []
@@ -69,6 +78,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await sql`
+    DELETE FROM auth_users WHERE username = ${testUsername}
+  `;
   await sql.query(
     "DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE customer_name LIKE 'API TEST %')",
     []

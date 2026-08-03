@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   getKitchenSession,
+  hasRole,
   KitchenAuthConfigError,
 } from "@/lib/auth/kitchen-auth";
 import { campaignSchema } from "@/lib/campaigns/campaign-schema";
@@ -17,10 +18,10 @@ const noStoreHeaders = { "Cache-Control": "no-store" };
 
 export async function GET() {
   try {
-    if (!(await getKitchenSession())) {
+    if (!hasRole(await getKitchenSession(), ["admin"])) {
       return Response.json(
-        { error: "Debes iniciar sesión para administrar las campañas." },
-        { status: 401, headers: noStoreHeaders },
+        { error: "Necesitas permisos de administrador para administrar las campañas." },
+        { status: 403, headers: noStoreHeaders },
       );
     }
 
@@ -43,10 +44,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getKitchenSession())) {
+    if (!hasRole(await getKitchenSession(), ["admin"])) {
       return Response.json(
-        { error: "Debes iniciar sesión para administrar las campañas." },
-        { status: 401, headers: noStoreHeaders },
+        { error: "Necesitas permisos de administrador para administrar las campañas." },
+        { status: 403, headers: noStoreHeaders },
       );
     }
 

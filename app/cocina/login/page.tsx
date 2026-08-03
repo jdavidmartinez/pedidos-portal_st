@@ -22,14 +22,21 @@ export default function KitchenLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        user?: { role: "admin" | "kitchen" };
+      };
 
       if (!response.ok) {
         throw new Error(payload.error || "No fue posible iniciar sesión.");
       }
 
       const nextPath = new URLSearchParams(window.location.search).get("next");
-      router.replace(nextPath === "/admin" ? "/admin" : "/cocina");
+      router.replace(
+        nextPath === "/admin" && payload.user?.role === "admin"
+          ? "/admin"
+          : "/cocina"
+      );
       router.refresh();
     } catch (loginError) {
       setError(

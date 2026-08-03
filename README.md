@@ -39,23 +39,48 @@ aplicables.
 
 WhatsApp no transporta las órdenes y no requiere API, QR ni sesión automatizada.
 
-## Acceso de cocina
+## Acceso y roles
 
-`/cocina` requiere usuario y contraseña. En esta primera versión temporal las
-credenciales están hardcodeadas en el servidor:
+`/cocina` requiere un usuario activo con rol `kitchen` o `admin`. `/admin` y
+las APIs de catálogo y campañas requieren específicamente el rol `admin`.
+Los usuarios, hashes de contraseña y sesiones revocables se guardan en Neon;
+no existen credenciales compartidas ni contraseñas hardcodeadas.
 
-- Usuario: `cocina`
-- Contraseña: `portalst`
-
-Solo debes configurar `AUTH_SECRET` en `.env.local` y en Vercel:
+Configura `AUTH_SECRET` en `.env.local` y en Vercel:
 
 ```bash
 openssl rand -hex 32
 ```
 
-La sesión se firma con `AUTH_SECRET` y se guarda en una cookie `httpOnly` con expiración de 12 horas.
+Después de aplicar las migraciones, crea el primer administrador desde un
+entorno seguro (no guardes estos valores en `.env.local`):
+
+```bash
+AUTH_USER_USERNAME=administrador \
+AUTH_USER_PASSWORD='Una-clave-larga-123!' \
+AUTH_USER_ROLE=admin \
+npm run auth:create-user
+```
+
+El mismo comando crea usuarios de cocina usando `AUTH_USER_ROLE=kitchen`.
+La contraseña debe contener al menos 12 caracteres, mayúscula, minúscula,
+número y símbolo. El comando nunca reemplaza silenciosamente un usuario existente.
+
+La sesión usa un token aleatorio en una cookie `httpOnly`, `SameSite=Lax`, con
+expiración de 12 horas. Neon conserva únicamente el hash del token, por lo que
+cerrar sesión lo revoca en el servidor. Cinco intentos fallidos para la misma
+combinación de usuario y origen bloquean el acceso durante 15 minutos.
+
+Cada usuario autenticado puede abrir `/cuenta` y cambiar su contraseña después
+de confirmar la actual. La operación cierra sus demás sesiones y conserva la
+sesión del dispositivo desde el que hizo el cambio. Un administrador puede
+abrir `/admin/usuarios` para restablecer la contraseña de cualquier usuario;
+este restablecimiento revoca todas las sesiones del usuario afectado. Si el
+administrador restablece su propia contraseña desde esa sección, debe iniciar
+sesión nuevamente.
 El `POST /api/orders` permanece público para que los clientes puedan enviar
-pedidos; la consulta y actualización de órdenes requieren autenticación.
+pedidos; la consulta y actualización de órdenes requieren rol `kitchen` o
+`admin`.
 
 ## Limitación del MVP
 
@@ -71,9 +96,8 @@ el domicilio no recibe descuento.
 
 `/menu` obtiene las categorías y productos activos desde `/api/menu`; el
 `/admin` permite modificar esos registros sin editar el código de la
-aplicación. Por ahora la autenticación de administrador reutiliza las
-credenciales temporales de cocina y las imágenes se indican mediante una ruta
-local o URL.
+aplicación. Solo los usuarios con rol `admin` pueden acceder; las imágenes se
+indican mediante una ruta local o URL.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.

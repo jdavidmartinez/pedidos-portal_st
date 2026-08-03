@@ -10,7 +10,12 @@ export async function GET() {
   try {
     const session = await getKitchenSession();
     return NextResponse.json(
-      { authenticated: Boolean(session), username: session?.username ?? null },
+      {
+        authenticated: Boolean(session),
+        user: session
+          ? { username: session.username, role: session.role }
+          : null,
+      },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {

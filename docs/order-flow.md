@@ -85,6 +85,9 @@ la orden es despachada o rechazada.
 | `POST` | `/api/admin/campaigns` | Crea una campaña de descuento. |
 | `PATCH` | `/api/admin/campaigns/[id]` | Edita una campaña. |
 | `DELETE` | `/api/admin/campaigns/[id]` | Borra una campaña del panel; los pedidos conservan su instantánea del descuento. |
+| `PATCH` | `/api/auth/password` | Cambia la contraseña del usuario autenticado después de validar la actual. |
+| `GET` | `/api/admin/users` | Lista usuarios para el panel administrativo. |
+| `PATCH` | `/api/admin/users/[id]/password` | Restablece una contraseña y revoca las sesiones del usuario. |
 
 Las respuestas usan `Cache-Control: no-store`. `GET /api/orders`, `GET
 /api/orders/export` y `PATCH
@@ -129,7 +132,7 @@ esa copia local.
 
 ## Administración del menú
 
-`/admin` reutiliza la sesión autenticada de cocina durante el MVP. Permite
+`/admin` requiere una sesión con rol `admin`. Permite
 editar nombre, descripción, precios, categoría, orden, cantidad disponible,
 disponibilidad y ruta o URL de imagen. Una cantidad vacía representa inventario
 ilimitado; una cantidad de `0` oculta el producto y evita nuevos pedidos.
@@ -139,12 +142,26 @@ locales como `/menu-comic-images/hamburguesa-portal-comic.png`. La migración
 `0007_menu_comic_images.sql` asigna automáticamente la ilustración
 correspondiente a cada producto sembrado.
 
-## Autenticación de cocina
+## Autenticación y autorización
 
-`/cocina/login` crea una sesión firmada en una cookie `httpOnly` con duración de
-12 horas. La primera versión usa temporalmente las credenciales `cocina` /
-`portalst` hardcodeadas en el servidor. `AUTH_SECRET` sigue configurándose como
-variable de entorno para firmar la sesión.
+`/cocina/login` valida usuarios activos almacenados en PostgreSQL. Las
+contraseñas se derivan con `scrypt` y una sal individual. Al autenticar, el
+servidor emite un token aleatorio de sesión en una cookie `httpOnly` durante 12
+horas y guarda únicamente su hash en `auth_sessions`. Cerrar sesión revoca el
+registro y desactivar un usuario invalida sus sesiones inmediatamente.
+
+Los roles `kitchen` y `admin` pueden consultar y operar pedidos. Solo `admin`
+puede abrir `/admin` o usar las APIs de menú y campañas. La validación se repite
+en cada API protegida; no depende de ocultar controles en el navegador. Los
+intentos fallidos se limitan en PostgreSQL y se bloquean temporalmente al
+alcanzar cinco fallos en una ventana de 15 minutos.
+
+Desde `/cuenta`, cualquier usuario puede cambiar su propia contraseña
+confirmando primero la actual. Se revocan sus otras sesiones y se emite una
+nueva para el dispositivo actual. Desde `/admin/usuarios`, un administrador
+puede restablecer la contraseña de otro usuario sin conocer la anterior; todas
+las sesiones del usuario se revocan. Ambas funciones aplican la misma política:
+12 a 128 caracteres con mayúscula, minúscula, número y símbolo.
 
 ## Contacto por WhatsApp
 
@@ -192,6 +209,8 @@ edite una campaña. `0009_order_edits.sql` conserva la auditoría de las
 correcciones realizadas desde cocina y `0010_optional_order_edit_reason.sql`
 permite omitir el motivo en instalaciones que ya habían aplicado la migración
 anterior.
+La migración `0011_role_based_auth.sql` crea usuarios con roles, sesiones
+revocables y límites compartidos de intentos de acceso.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;
 las órdenes guardan una copia del nombre y precio usados al momento de crearse.
 
@@ -201,9 +220,8 @@ La implementación actual ya usa una base de datos durable. Para una operación
 real todavía debe añadirse:
 
 1. historial de cambios de estado;
-2. usuarios y roles de cocina en base de datos;
-3. política de retención para teléfono y dirección;
-4. actualizaciones en tiempo real o polling respaldado por almacenamiento
+2. política de retención para teléfono y dirección;
+3. actualizaciones en tiempo real o polling respaldado por almacenamiento
    compartido.
 
 Hasta completar esos controles, el flujo debe considerarse un MVP.

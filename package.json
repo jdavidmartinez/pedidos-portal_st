@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test:unit": "vitest run tests/unit",
     "test:api": "node --env-file-if-exists=.env.test scripts/run-api-tests.mjs",
-    "db:migrate:test": "node --env-file-if-exists=.env.test scripts/migrate-test-db.mjs"
+    "db:migrate:test": "node --env-file-if-exists=.env.test scripts/migrate-test-db.mjs",
+    "auth:create-user": "node --env-file-if-exists=.env.local scripts/create-auth-user.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",

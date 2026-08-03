@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   getKitchenSession,
+  hasRole,
   KitchenAuthConfigError,
 } from "@/lib/auth/kitchen-auth";
 import { adminMenuProductSchema } from "@/lib/menu/admin-menu-schema";
@@ -25,10 +26,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await getKitchenSession())) {
+    if (!hasRole(await getKitchenSession(), ["admin"])) {
       return Response.json(
-        { error: "Debes iniciar sesión para administrar el menú." },
-        { status: 401, headers: noStoreHeaders }
+        { error: "Necesitas permisos de administrador para administrar el menú." },
+        { status: 403, headers: noStoreHeaders }
       );
     }
 
