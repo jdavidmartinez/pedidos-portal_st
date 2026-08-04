@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run tests/unit",
     "test:api": "node --env-file-if-exists=.env.test scripts/run-api-tests.mjs",
+    "test:e2e": "node --env-file-if-exists=.env.test node_modules/@playwright/test/cli.js test",
     "db:migrate:test": "node --env-file-if-exists=.env.test scripts/migrate-test-db.mjs",
     "auth:create-user": "node --env-file-if-exists=.env.local scripts/create-auth-user.mjs"
   },
@@ -23,6 +24,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

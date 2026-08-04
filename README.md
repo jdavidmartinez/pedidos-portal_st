@@ -129,6 +129,14 @@ Las pruebas de API contra Neon se ejecutan por separado con `npm run test:api`
 después de configurar `TEST_DATABASE_URL` en `.env.test` usando una base
 exclusiva para pruebas.
 
+Las pruebas de navegador requieren Chromium y la aplicación compilada:
+
+```bash
+npx playwright install chromium
+npm run build
+npm run test:e2e
+```
+
 GitHub Actions ejecuta estas validaciones automáticamente para pull requests y
 pushes a `master`. El job de integración requiere los secretos
 `TEST_DATABASE_URL` y `TEST_AUTH_SECRET` configurados en el repositorio; consulta

@@ -95,6 +95,20 @@ no realiza ninguna conexión ni escritura.
 
 ### 4. Pruebas E2E del flujo de cliente
 
+La primera suite automatizada usa Playwright con Chromium. Antes de ejecutarla
+localmente, compila la aplicación y asegúrate de tener `.env.test` configurado:
+
+```bash
+npx playwright install chromium
+npm run build
+npm run test:e2e
+```
+
+Playwright inicia la aplicación compilada en `127.0.0.1:3100`. El setup crea
+usuarios temporales `admin` y `kitchen` únicamente en Neon Testing y el teardown
+los elimina. El flujo público intercepta las APIs de menú, pedidos y carga de
+imágenes para no crear órdenes reales ni archivos en Blob.
+
 En un navegador de prueba:
 
 1. Abrir `/menu` y comprobar categorías, imágenes y precios.
@@ -166,7 +180,7 @@ Una versión puede pasar a producción cuando:
   contraseña y restablecimiento administrativo.
 - [x] Integrar lint, TypeScript, pruebas unitarias, pruebas de API y build en CI
   antes de hacer merge a `master`.
-- [ ] Añadir pruebas E2E con Playwright para los flujos de cliente, cocina,
+- [x] Añadir pruebas E2E con Playwright para los flujos de cliente, cocina,
   administración, autenticación, campañas y carga de imágenes.
 - [ ] Formalizar el smoke test de Preview y producción, registrando su resultado
   por despliegue.
@@ -189,7 +203,7 @@ Una versión puede pasar a producción cuando:
 | --- | --- | --- | ---: |
 | Crítica | Completado | Ampliar la cobertura de integración de APIs | 100% |
 | Crítica | Completado | Integrar las validaciones automáticas en CI | 100% |
-| Alta | Pendiente | Implementar pruebas E2E con Playwright | 0% |
+| Alta | Completado | Implementar pruebas E2E con Playwright | 100% |
 | Alta | Manual | Formalizar el smoke test de Preview y producción | 20% |
 | Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
 | Alta | Parcial | Completar las pruebas de autenticación y seguridad | 50% |
@@ -213,6 +227,9 @@ dos jobs:
    de Next.js y ejecuta lint, TypeScript, pruebas unitarias y build de producción.
 2. `api-integration`: aplica migraciones sobre la base Neon de testing y ejecuta
    toda la batería de integración con `npm run test:api`.
+3. `e2e`: después de las pruebas de API, instala Chromium, compila la aplicación
+   y ejecuta Playwright. Si falla, conserva durante siete días el reporte HTML,
+   las capturas, los videos y las trazas disponibles.
 
 El repositorio de GitHub debe tener estos secretos en `Settings > Secrets and
 variables > Actions`:
@@ -225,4 +242,4 @@ variables > Actions`:
 Si falta cualquiera de esos secretos, el job de integración falla explícitamente
 en lugar de omitir las pruebas. Al configurar reglas de protección para
 `master`, deben marcarse como obligatorios los checks `Lint, types, unit tests and
-build` y `API integration tests (Neon)`.
+build`, `API integration tests (Neon)` y `End-to-end tests (Playwright)`.
