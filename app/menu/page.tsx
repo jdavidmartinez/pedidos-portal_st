@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- El catálogo admite URLs configurables por el administrador. */
+
 import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CategoriasMenu, Producto } from './data';

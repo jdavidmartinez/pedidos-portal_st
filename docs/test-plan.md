@@ -139,7 +139,7 @@ Después de cada despliegue en Vercel:
 5. Descargar un consolidado indicando fechas Desde y Hasta.
 6. Confirmar en Network que `/api/menu` y `/api/orders` responden `200` y no
    exponen secretos.
-7. Confirmar que una imagen de `/menu-comic-images/` responde `200`.
+7. Confirmar que una imagen de `*.public.blob.vercel-storage.com/menu-products/` responde `200`.
 
 ## Criterios de aprobación
 
