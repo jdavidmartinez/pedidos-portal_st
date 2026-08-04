@@ -54,4 +54,9 @@ test("permite al administrador abrir el panel y simula una carga de imagen", asy
     "https://example.test/menu-products/e2e-upload.webp"
   );
   await expect(page.getByRole("status")).toContainText("Imagen subida");
+
+  await page.goto("/admin/usuarios");
+  await expect(page.getByRole("heading", { name: "Usuarios", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Crear usuario" })).toBeVisible();
+  await expect(page.getByText("Por seguridad no puedes modificar tu propio rol")).toBeVisible();
 });

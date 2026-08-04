@@ -29,7 +29,8 @@ import {
   DELETE as deleteCampaign,
   PATCH as patchCampaign,
 } from "@/app/api/admin/campaigns/[id]/route";
-import { GET as getAdminUsers } from "@/app/api/admin/users/route";
+import { GET as getAdminUsers, POST as postAdminUser } from "@/app/api/admin/users/route";
+import { PATCH as patchAdminUser } from "@/app/api/admin/users/[id]/route";
 import { PATCH as resetUserPassword } from "@/app/api/admin/users/[id]/password/route";
 import { POST as login } from "@/app/api/auth/login/route";
 import { POST as logout } from "@/app/api/auth/logout/route";
@@ -49,7 +50,10 @@ const testAdminUsername = `api-admin-${Date.now()}`;
 const testAdminPassword = "API-admin-password-123!";
 const testProductPrefix = `API PRODUCT ${Date.now()}`;
 const testCampaignPrefix = `API CAMPAIGN ${Date.now()}`;
+const testManagedUsername = `api-managed-${Date.now()}`;
+const testManagedPassword = "API-managed-password-123!";
 let testKitchenUserId = "";
+let testAdminUserId = "";
 
 function orderPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -114,6 +118,7 @@ beforeAll(async () => {
       (${adminId}, ${testAdminUsername}, ${await hashPassword(testAdminPassword)}, 'admin')
   `;
   testKitchenUserId = kitchenId;
+  testAdminUserId = adminId;
   await sql.query(
     "DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE customer_name LIKE 'API TEST %')",
     []
@@ -130,7 +135,7 @@ afterAll(async () => {
     DELETE FROM menu_products WHERE name LIKE ${`${testProductPrefix}%`}
   `;
   await sql`
-    DELETE FROM auth_users WHERE username IN (${testUsername}, ${testAdminUsername})
+    DELETE FROM auth_users WHERE username IN (${testUsername}, ${testAdminUsername}, ${testManagedUsername})
   `;
   await sql.query(
     "DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE customer_name LIKE 'API TEST %')",
@@ -328,6 +333,12 @@ describe("orders API against Neon", () => {
     expect((await getAdminMenu()).status).toBe(403);
     expect((await getCampaigns()).status).toBe(403);
     expect((await getAdminUsers()).status).toBe(403);
+    expect((await postAdminUser(jsonRequest("/api/admin/users", "POST", {
+      username: testManagedUsername,
+      role: "kitchen",
+      password: testManagedPassword,
+      confirmation: testManagedPassword,
+    }))).status).toBe(403);
 
     await setAdminSession();
     const usersResponse = await getAdminUsers();
@@ -341,6 +352,61 @@ describe("orders API against Neon", () => {
         expect.objectContaining({ username: testAdminUsername, role: "admin" }),
       ])
     );
+
+    const createUserResponse = await postAdminUser(
+      jsonRequest("/api/admin/users", "POST", {
+        username: testManagedUsername,
+        role: "kitchen",
+        password: testManagedPassword,
+        confirmation: testManagedPassword,
+      })
+    );
+    const createUserBody = (await createUserResponse.json()) as {
+      user: { id: string; username: string; role: string; active: boolean };
+    };
+    expect(createUserResponse.status).toBe(201);
+    expect(createUserBody.user).toMatchObject({
+      username: testManagedUsername,
+      role: "kitchen",
+      active: true,
+    });
+    const duplicateUser = await postAdminUser(
+      jsonRequest("/api/admin/users", "POST", {
+        username: testManagedUsername.toUpperCase(),
+        role: "kitchen",
+        password: testManagedPassword,
+        confirmation: testManagedPassword,
+      })
+    );
+    expect(duplicateUser.status).toBe(409);
+
+    const managedSession = await authenticateKitchenUser(
+      testManagedUsername,
+      testManagedPassword,
+      "api-managed-user"
+    );
+    const updateUserResponse = await patchAdminUser(
+      jsonRequest(`/api/admin/users/${createUserBody.user.id}`, "PATCH", {
+        role: "admin",
+        active: false,
+      }),
+      { params: Promise.resolve({ id: createUserBody.user.id }) }
+    );
+    const updateUserBody = (await updateUserResponse.json()) as {
+      user: { role: string; active: boolean };
+    };
+    expect(updateUserResponse.status).toBe(200);
+    expect(updateUserBody.user).toMatchObject({ role: "admin", active: false });
+    expect(await authRepository.getSession(managedSession.token)).toBeNull();
+
+    const selfUpdate = await patchAdminUser(
+      jsonRequest(`/api/admin/users/${testAdminUserId}`, "PATCH", {
+        role: "kitchen",
+        active: true,
+      }),
+      { params: Promise.resolve({ id: testAdminUserId }) }
+    );
+    expect(selfUpdate.status).toBe(409);
 
     const categories = await sql`SELECT slug FROM menu_categories WHERE active = TRUE ORDER BY sort_order LIMIT 1`;
     const categorySlug = String(categories[0]?.slug);
