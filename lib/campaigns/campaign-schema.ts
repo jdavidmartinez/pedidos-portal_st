@@ -11,6 +11,7 @@ function isValidDate(value: string) {
 export const campaignSchema = z
   .object({
     name: z.string().trim().min(2).max(100),
+    imageUrl: z.string().trim().max(2000).default(""),
     productIds: z.array(z.string().trim().min(1).max(100)).min(
       1,
       "Selecciona al menos un producto."

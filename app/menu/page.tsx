@@ -14,6 +14,7 @@ interface Mensaje {
 interface MenuCampaign {
   id: string;
   name: string;
+  imageUrl: string;
   products: Array<{ id: string; name: string; imageUrl: string }>;
   discountPercent: number;
   startsOn: string;
@@ -606,7 +607,7 @@ export default function LandingMenuPage() {
               role="img"
               aria-label={`Productos en promoción: ${campaign.products.map((product) => product.name).join(', ')}`}
               className="h-52 w-full bg-neutral-900 bg-cover bg-center"
-              style={{ backgroundImage: `linear-gradient(to top, rgba(23,23,23,1), rgba(23,23,23,0.05) 60%), url(${JSON.stringify(campaign.products[0]?.imageUrl ?? "")})` }}
+              style={{ backgroundImage: `linear-gradient(to top, rgba(23,23,23,1), rgba(23,23,23,0.05) 60%), url(${JSON.stringify(campaign.imageUrl || campaign.products[0]?.imageUrl || "")})` }}
             />
 
             <div className="relative -mt-10 px-6 pb-6">
