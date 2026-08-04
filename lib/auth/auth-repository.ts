@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db/neon";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 
@@ -51,6 +51,8 @@ interface PublicUserRow {
 export class InvalidCredentialsError extends Error {}
 export class CurrentPasswordIncorrectError extends Error {}
 export class AuthUserNotFoundError extends Error {}
+export class AuthUsernameConflictError extends Error {}
+export class LastActiveAdminError extends Error {}
 export class LoginRateLimitedError extends Error {
   constructor(public readonly retryAfterSeconds: number) {
     super("Demasiados intentos. Intenta nuevamente más tarde.");
@@ -195,13 +197,65 @@ class PostgresAuthRepository {
       FROM auth_users
       ORDER BY lower(username)
     `) as unknown as PublicUserRow[];
-    return rows.map((row) => ({
-      id: row.id,
-      username: row.username,
-      role: row.role,
-      active: row.active,
-      createdAt: new Date(row.created_at).toISOString(),
-    }));
+    return rows.map((row) => this.toPublicUser(row));
+  }
+
+  async createUser(username: string, password: string, role: AuthRole) {
+    const sql = getSql();
+    const id = randomUUID();
+    const passwordHash = await hashPassword(password);
+    try {
+      const rows = (await sql`
+        INSERT INTO auth_users (id, username, password_hash, role, active)
+        VALUES (${id}, ${normalizeUsername(username)}, ${passwordHash}, ${role}, TRUE)
+        RETURNING id, username, role, active, created_at
+      `) as unknown as PublicUserRow[];
+      return this.toPublicUser(rows[0]);
+    } catch (error) {
+      if (
+        typeof error === "object" && error !== null && "code" in error
+        && (error as { code?: unknown }).code === "23505"
+      ) {
+        throw new AuthUsernameConflictError("Ya existe un usuario con ese nombre.");
+      }
+      throw error;
+    }
+  }
+
+  async updateUserAccess(userId: string, role: AuthRole, active: boolean) {
+    const sql = getSql();
+    const results = await sql.transaction([
+      sql`SELECT pg_advisory_xact_lock(982451653)`,
+      sql`SELECT id FROM auth_users WHERE id = ${userId} LIMIT 1`,
+      sql`
+        UPDATE auth_users
+        SET role = ${role}, active = ${active}, updated_at = now()
+        WHERE id = ${userId}
+          AND NOT (
+            role = 'admin'
+            AND active = TRUE
+            AND (${role} <> 'admin' OR ${active} = FALSE)
+            AND (SELECT count(*) FROM auth_users WHERE role = 'admin' AND active = TRUE) <= 1
+          )
+        RETURNING id, username, role, active, created_at
+      `,
+      sql`
+        DELETE FROM auth_sessions
+        WHERE user_id = ${userId}
+          AND EXISTS (
+            SELECT 1 FROM auth_users
+            WHERE id = ${userId} AND role = ${role} AND active = ${active}
+          )
+      `,
+    ]) as unknown as [unknown[], Array<{ id: string }>, PublicUserRow[], unknown[]];
+
+    if (results[1].length === 0) {
+      throw new AuthUserNotFoundError("El usuario no existe.");
+    }
+    if (results[2].length === 0) {
+      throw new LastActiveAdminError("Debe permanecer al menos un administrador activo.");
+    }
+    return this.toPublicUser(results[2][0]);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
@@ -247,6 +301,16 @@ class PostgresAuthRepository {
       `,
       sql`DELETE FROM auth_sessions WHERE user_id = ${userId}`,
     ]);
+  }
+
+  private toPublicUser(row: PublicUserRow) {
+    return {
+      id: row.id,
+      username: row.username,
+      role: row.role,
+      active: row.active,
+      createdAt: new Date(row.created_at).toISOString(),
+    };
   }
 }
 

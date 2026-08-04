@@ -78,6 +78,12 @@ abrir `/admin/usuarios` para restablecer la contraseña de cualquier usuario;
 este restablecimiento revoca todas las sesiones del usuario afectado. Si el
 administrador restablece su propia contraseña desde esa sección, debe iniciar
 sesión nuevamente.
+
+Desde `/admin/usuarios` también puede crear usuarios, asignar los roles
+`admin` o `kitchen`, y activar o desactivar cuentas. Cambiar el rol o el estado
+revoca todas las sesiones del usuario. Un administrador no puede modificar su
+propio rol ni desactivar su cuenta, y el sistema siempre conserva al menos un
+administrador activo.
 El `POST /api/orders` permanece público para que los clientes puedan enviar
 pedidos; la consulta y actualización de órdenes requieren rol `kitchen` o
 `admin`.

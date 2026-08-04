@@ -192,7 +192,7 @@ Una versión puede pasar a producción cuando:
   errores de Blob y fallos en la creación de pedidos.
 - [ ] Documentar la política de copias, restauración y rollback de migraciones
   de Neon.
-- [ ] Permitir crear, activar, desactivar y cambiar roles de usuarios desde el
+- [x] Permitir crear, activar, desactivar y cambiar roles de usuarios desde el
   panel administrativo.
 - [ ] Realizar una revisión de accesibilidad, navegación por teclado, contraste y
   experiencia móvil.
@@ -206,11 +206,11 @@ Una versión puede pasar a producción cuando:
 | Alta | Completado | Implementar pruebas E2E con Playwright | 100% |
 | Alta | Manual | Formalizar el smoke test de Preview y producción | 20% |
 | Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
-| Alta | Parcial | Completar las pruebas de autenticación y seguridad | 50% |
+| Alta | Completado | Completar las pruebas de autenticación y seguridad | 100% |
 | Media | Completado | Automatizar y probar la limpieza periódica de Blob | 100% |
 | Media | Parcial | Añadir observabilidad y alertas de producción | 20% |
 | Media | Parcial | Definir copias, recuperación y rollback de Neon | 20% |
-| Media | Parcial | Completar la administración de usuarios desde el panel | 30% |
+| Media | Completado | Completar la administración de usuarios desde el panel | 100% |
 | Baja | Parcial | Revisar accesibilidad y experiencia móvil | 30% |
 
 Los porcentajes describen el avance funcional estimado y deben actualizarse al
@@ -221,7 +221,7 @@ integración y CI; después automatizar los flujos E2E y formalizar el smoke tes
 
 El workflow `.github/workflows/ci.yml` se ejecuta en cada pull request dirigido a
 `master`, en cada push a `master` y manualmente desde GitHub Actions. Se divide en
-dos jobs:
+tres jobs:
 
 1. `quality`: instala dependencias reproducibles con `npm ci`, restaura el caché
    de Next.js y ejecuta lint, TypeScript, pruebas unitarias y build de producción.

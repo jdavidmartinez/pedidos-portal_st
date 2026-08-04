@@ -88,6 +88,8 @@ la orden es despachada o rechazada.
 | `DELETE` | `/api/admin/campaigns/[id]` | Borra una promoción del panel. |
 | `PATCH` | `/api/auth/password` | Cambia la contraseña del usuario autenticado después de validar la actual. |
 | `GET` | `/api/admin/users` | Lista usuarios para el panel administrativo. |
+| `POST` | `/api/admin/users` | Crea un usuario con rol `admin` o `kitchen`. |
+| `PATCH` | `/api/admin/users/[id]` | Cambia el rol o estado activo y revoca las sesiones del usuario. |
 | `PATCH` | `/api/admin/users/[id]/password` | Restablece una contraseña y revoca las sesiones del usuario. |
 
 Las respuestas usan `Cache-Control: no-store`. `GET /api/orders`, `GET
