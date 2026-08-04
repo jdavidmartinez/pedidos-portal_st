@@ -90,7 +90,8 @@ ejecutan con `npm run db:migrate`. La migración
 `0006_marketing_consent.sql` permanece aplicada en Neon por compatibilidad.
 La migración `0007_menu_comic_images.sql` asigna al catálogo las imágenes
 públicas de `public/menu-comic-images`. Las promociones son anuncios de
-marketing asociados a uno o varios productos y un rango de fechas. Se muestran en un popup
+marketing asociados a uno o varios productos, una imagen propia opcional y un
+rango de fechas. Se muestran en un popup
 al abrir `/menu`, pero no modifican precios, pedidos, facturas ni mensajes de
 WhatsApp. El restaurante decide manualmente si aplica el descuento anunciado.
 

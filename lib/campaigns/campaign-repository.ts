@@ -7,6 +7,7 @@ import type { CampaignInput } from "@/lib/campaigns/campaign-schema";
 export interface Campaign {
   id: string;
   name: string;
+  imageUrl: string;
   products: Array<{ id: string; name: string; imageUrl: string }>;
   discountPercent: number;
   startsOn: string;
@@ -22,6 +23,7 @@ export class CampaignDateConflictError extends Error {}
 interface CampaignRow {
   id: string;
   name: string;
+  image_url: string | null;
   products: unknown;
   discount_percent: number | string;
   starts_on: string | Date;
@@ -42,6 +44,7 @@ function toCampaign(row: CampaignRow): Campaign {
   return {
     id: row.id,
     name: row.name,
+    imageUrl: row.image_url ?? "",
     products: products.map((product) => {
       const value = product as Record<string, unknown>;
       return {
@@ -63,7 +66,7 @@ class CampaignRepository {
   async list(): Promise<Campaign[]> {
     const sql = getSql();
     const rows = (await sql`
-      SELECT c.id, c.name, c.discount_percent, c.starts_on, c.ends_on,
+      SELECT c.id, c.name, c.image_url, c.discount_percent, c.starts_on, c.ends_on,
              c.active, c.created_at, c.updated_at,
              COALESCE(
                json_agg(json_build_object('id', p.id, 'name', p.name, 'imageUrl', p.image_url)
@@ -83,7 +86,7 @@ class CampaignRepository {
   async getActiveForDate(date: string): Promise<Campaign | null> {
     const sql = getSql();
     const rows = (await sql`
-      SELECT c.id, c.name, c.discount_percent, c.starts_on, c.ends_on,
+      SELECT c.id, c.name, c.image_url, c.discount_percent, c.starts_on, c.ends_on,
              c.active, c.created_at, c.updated_at,
              json_agg(json_build_object('id', p.id, 'name', p.name, 'imageUrl', p.image_url)
                ORDER BY p.name) AS products
@@ -108,9 +111,9 @@ class CampaignRepository {
     await sql.transaction([
       sql`
         INSERT INTO campaigns (
-          id, name, product_id, discount_percent, starts_on, ends_on, active
+          id, name, image_url, product_id, discount_percent, starts_on, ends_on, active
         ) VALUES (
-          ${id}, ${input.name.trim()}, ${input.productIds[0]}, ${input.discountPercent},
+          ${id}, ${input.name.trim()}, ${input.imageUrl || null}, ${input.productIds[0]}, ${input.discountPercent},
           ${input.startsOn}::date, ${input.endsOn}::date, ${input.active}
         )
       `,
@@ -131,6 +134,7 @@ class CampaignRepository {
       sql`
         UPDATE campaigns
         SET name = ${input.name.trim()},
+            image_url = ${input.imageUrl || null},
             product_id = ${input.productIds[0]},
             discount_percent = ${input.discountPercent},
             starts_on = ${input.startsOn}::date,
@@ -165,7 +169,7 @@ class CampaignRepository {
   private async get(id: string): Promise<Campaign> {
     const sql = getSql();
     const rows = (await sql`
-      SELECT c.id, c.name, c.discount_percent, c.starts_on, c.ends_on,
+      SELECT c.id, c.name, c.image_url, c.discount_percent, c.starts_on, c.ends_on,
              c.active, c.created_at, c.updated_at,
              COALESCE(
                json_agg(json_build_object('id', p.id, 'name', p.name, 'imageUrl', p.image_url)

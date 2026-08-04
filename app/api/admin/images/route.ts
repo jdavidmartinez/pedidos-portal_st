@@ -41,6 +41,8 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const image = formData.get("image");
+    const requestedFolder = formData.get("folder");
+    const folder = requestedFolder === "campaigns" ? "campaigns" : "menu-products";
     if (!(image instanceof File)) {
       return Response.json(
         { error: "Selecciona una imagen para subir." },
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const blob = await put(`menu-products/${safeMenuImageName(image.name)}`, image, {
+    const blob = await put(`${folder}/${safeMenuImageName(image.name)}`, image, {
       access: "public",
       addRandomSuffix: true,
       contentType: image.type,

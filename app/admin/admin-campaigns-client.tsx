@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AdminImageUploader from "./admin-image-uploader";
 
 interface Campaign {
   id: string;
   name: string;
+  imageUrl: string;
   products: Array<{ id: string; name: string; imageUrl: string }>;
   discountPercent: number;
   startsOn: string;
@@ -23,6 +25,7 @@ type CampaignDraft = Omit<Campaign, "id" | "products"> & { productIds: string[] 
 const today = new Date().toISOString().slice(0, 10);
 const emptyDraft: CampaignDraft = {
   name: "",
+  imageUrl: "",
   productIds: [],
   discountPercent: 10,
   startsOn: today,
@@ -36,6 +39,7 @@ const fieldClass =
 function campaignPayload(campaign: Campaign) {
   return {
     name: campaign.name,
+    imageUrl: campaign.imageUrl,
     productIds: campaign.products.map((product) => product.id),
     discountPercent: Number(campaign.discountPercent),
     startsOn: campaign.startsOn.slice(0, 10),
@@ -181,6 +185,14 @@ export default function AdminCampaignsClient() {
           <Field label="Desde"><input required type="date" value={draft.startsOn} onChange={(event) => setDraft({ ...draft, startsOn: event.target.value })} className={fieldClass} /></Field>
           <Field label="Hasta"><input required type="date" value={draft.endsOn} onChange={(event) => setDraft({ ...draft, endsOn: event.target.value })} className={fieldClass} /></Field>
           <button type="submit" disabled={saving || draft.productIds.length === 0} className="rounded-lg border border-[#facc15] bg-[#d97706] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50">{saving ? "Creando..." : "Crear promoción"}</button>
+          <div className="grid gap-2 md:col-span-2 xl:col-span-6">
+            <Field label="Imagen propia del popup (opcional)"><input value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} placeholder="Sube una imagen o pega una URL" className={fieldClass} /></Field>
+            <div className="flex flex-wrap items-center gap-3">
+              <AdminImageUploader folder="campaigns" onUploaded={(url) => setDraft((current) => ({ ...current, imageUrl: url }))} onError={setError} onNotice={setNotice} />
+              <span className="text-xs font-normal normal-case tracking-normal text-white/45">JPEG, PNG o WebP · máximo 4 MB. Si queda vacía, se usa la imagen del primer producto.</span>
+            </div>
+            {draft.imageUrl && <img src={draft.imageUrl} alt="Vista previa de la promoción" className="h-28 w-full rounded-lg border border-white/10 object-cover" />}
+          </div>
         </form>
 
         {loading ? <p className="py-5 text-sm text-white/55">Cargando promociones...</p> : campaigns.length === 0 ? <p className="rounded-xl border border-dashed border-white/20 px-4 py-5 text-sm text-white/55">Aún no hay promociones configuradas.</p> : (
@@ -189,6 +201,12 @@ export default function AdminCampaignsClient() {
               <article key={campaign.id} className={`rounded-xl border p-3 ${campaign.active ? "border-emerald-400/50 bg-emerald-950/10" : "border-white/15 bg-black/20"}`}>
                 <div className="grid gap-3">
                   <Field label="Título"><input value={campaign.name} onChange={(event) => updateLocal(campaign.id, "name", event.target.value)} className={fieldClass} /></Field>
+                  <Field label="Imagen propia del popup"><input value={campaign.imageUrl} onChange={(event) => updateLocal(campaign.id, "imageUrl", event.target.value)} placeholder="Sin imagen propia" className={fieldClass} /></Field>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AdminImageUploader folder="campaigns" onUploaded={(url) => updateLocal(campaign.id, "imageUrl", url)} onError={setError} onNotice={setNotice} />
+                    {campaign.imageUrl && <button type="button" onClick={() => updateLocal(campaign.id, "imageUrl", "")} className="rounded-lg border border-white/20 px-3 py-2 text-[10px] font-black uppercase text-white/70">Usar imagen del producto</button>}
+                  </div>
+                  {campaign.imageUrl && <img src={campaign.imageUrl} alt={`Vista previa de ${campaign.name}`} className="h-28 w-full rounded-lg border border-white/10 object-cover" />}
                   <Field label="Productos"><ProductSelector products={products} selectedIds={campaign.products.map((product) => product.id)} onChange={(productIds) => updateLocal(campaign.id, "products", products.filter((product) => productIds.includes(product.id)).map((product) => ({ id: product.id, name: product.name, imageUrl: "" })))} /></Field>
                   {campaign.products.length === 0 && <p className="text-xs text-amber-200">Selecciona al menos un producto antes de reactivar esta promoción anterior.</p>}
                   <div className="grid grid-cols-3 gap-2">

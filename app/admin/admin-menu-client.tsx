@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import AdminCampaignsClient from "./admin-campaigns-client";
+import AdminImageUploader from "./admin-image-uploader";
 
 interface Product {
   id: string;
@@ -48,63 +49,6 @@ const formatCOP = (value: number) =>
     currency: "COP",
     maximumFractionDigits: 0,
   }).format(value);
-
-function ImageUploader({
-  onUploaded,
-  onError,
-  onNotice,
-}: {
-  onUploaded: (url: string) => void;
-  onError: (message: string) => void;
-  onNotice: (message: string) => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-
-  async function uploadImage(event: React.ChangeEvent<HTMLInputElement>) {
-    const image = event.target.files?.[0];
-    event.target.value = "";
-    if (!image) return;
-
-    setUploading(true);
-    onError("");
-    onNotice("");
-
-    try {
-      const formData = new FormData();
-      formData.append("image", image);
-      const response = await fetch("/api/admin/images", { method: "POST", body: formData });
-      const payload = await response.json() as { url?: string; error?: string };
-
-      if (response.status === 401 || response.status === 403) {
-        window.location.replace("/cocina/login?next=/admin");
-        return;
-      }
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error || "No fue posible subir la imagen.");
-      }
-
-      onUploaded(payload.url);
-      onNotice("Imagen subida. Guarda el producto para vincularla al menú.");
-    } catch (uploadError) {
-      onError(uploadError instanceof Error ? uploadError.message : "No fue posible subir la imagen.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-emerald-400/50 bg-emerald-950/30 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-100 transition hover:bg-emerald-900/40 has-disabled:cursor-wait has-disabled:opacity-50">
-      {uploading ? "Subiendo imagen..." : "Subir imagen a Vercel"}
-      <input
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        disabled={uploading}
-        onChange={(event) => void uploadImage(event)}
-        className="sr-only"
-      />
-    </label>
-  );
-}
 
 function productPayload(product: Product) {
   return {
@@ -378,7 +322,7 @@ export default function AdminMenuClient({ username }: Props) {
                   <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="/menu-comic-images/hamburguesa-portal-comic.png" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
                 <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-                  <ImageUploader
+                  <AdminImageUploader
                     onUploaded={(url) => setNewProduct((current) => ({ ...current, imageUrl: url }))}
                     onError={setError}
                     onNotice={setNotice}
@@ -439,7 +383,7 @@ export default function AdminMenuClient({ username }: Props) {
                       <input value={product.imageUrl} onChange={(event) => updateProduct(product.id, "imageUrl", event.target.value)} className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                     </label>
                     <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-                      <ImageUploader
+                      <AdminImageUploader
                         onUploaded={(url) => updateProduct(product.id, "imageUrl", url)}
                         onError={setError}
                         onNotice={setNotice}
