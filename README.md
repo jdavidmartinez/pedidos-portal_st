@@ -105,9 +105,11 @@ Para habilitar las cargas, conecta un Blob store público al proyecto desde
 Vercel (`Storage` > `Create Database` > `Blob`). Vercel agregará
 `BLOB_READ_WRITE_TOKEN` al proyecto; vuelve a desplegar la aplicación después
 de conectarlo. Para desarrollo local, descarga las variables con
-`vercel env pull .env.local`. Las imágenes reemplazadas no se eliminan
-automáticamente para evitar borrar archivos que todavía puedan estar en uso;
-su limpieza se realiza desde el panel de Blob.
+`vercel env pull .env.local`. Las imágenes reemplazadas no se eliminan de
+inmediato. `/admin` compara Blob con todas las referencias de productos y
+campañas; conserva los archivos huérfanos durante 30 días desde su primera
+detección y luego permite eliminarlos manualmente. Las imágenes compartidas o
+todavía vinculadas nunca se marcan como eliminables.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
