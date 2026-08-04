@@ -49,6 +49,63 @@ const formatCOP = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+function ImageUploader({
+  onUploaded,
+  onError,
+  onNotice,
+}: {
+  onUploaded: (url: string) => void;
+  onError: (message: string) => void;
+  onNotice: (message: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const image = event.target.files?.[0];
+    event.target.value = "";
+    if (!image) return;
+
+    setUploading(true);
+    onError("");
+    onNotice("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", image);
+      const response = await fetch("/api/admin/images", { method: "POST", body: formData });
+      const payload = await response.json() as { url?: string; error?: string };
+
+      if (response.status === 401 || response.status === 403) {
+        window.location.replace("/cocina/login?next=/admin");
+        return;
+      }
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error || "No fue posible subir la imagen.");
+      }
+
+      onUploaded(payload.url);
+      onNotice("Imagen subida. Guarda el producto para vincularla al menú.");
+    } catch (uploadError) {
+      onError(uploadError instanceof Error ? uploadError.message : "No fue posible subir la imagen.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-emerald-400/50 bg-emerald-950/30 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-100 transition hover:bg-emerald-900/40 has-disabled:cursor-wait has-disabled:opacity-50">
+      {uploading ? "Subiendo imagen..." : "Subir imagen a Vercel"}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        disabled={uploading}
+        onChange={(event) => void uploadImage(event)}
+        className="sr-only"
+      />
+    </label>
+  );
+}
+
 function productPayload(product: Product) {
   return {
     categorySlug: product.categorySlug,
@@ -320,6 +377,14 @@ export default function AdminMenuClient({ username }: Props) {
                 <label className="grid gap-1 text-[10px] font-black uppercase tracking-wider text-white/70 md:col-span-2">Ruta local o URL de imagen
                   <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="/menu-comic-images/hamburguesa-portal-comic.png" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
+                <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                  <ImageUploader
+                    onUploaded={(url) => setNewProduct((current) => ({ ...current, imageUrl: url }))}
+                    onError={setError}
+                    onNotice={setNotice}
+                  />
+                  <span className="text-xs text-white/45">JPEG, PNG o WebP · máximo 4 MB</span>
+                </div>
               </div>
               <button type="submit" disabled={creating} className="mt-4 rounded-lg border border-[#facc15] bg-[#d97706] px-4 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:brightness-110 disabled:opacity-50">{creating ? "Creando..." : "Crear producto"}</button>
             </form>
@@ -373,6 +438,14 @@ export default function AdminMenuClient({ username }: Props) {
                     <label className="grid gap-1 text-[10px] font-black uppercase tracking-wider text-white/60 sm:col-span-2">Ruta local o URL de imagen
                       <input value={product.imageUrl} onChange={(event) => updateProduct(product.id, "imageUrl", event.target.value)} className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                     </label>
+                    <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+                      <ImageUploader
+                        onUploaded={(url) => updateProduct(product.id, "imageUrl", url)}
+                        onError={setError}
+                        onNotice={setNotice}
+                      />
+                      <span className="text-xs text-white/45">JPEG, PNG o WebP · máximo 4 MB</span>
+                    </div>
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
                     <label className="flex items-center gap-2 text-xs font-bold text-white/75">
