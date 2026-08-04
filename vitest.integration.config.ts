@@ -11,7 +11,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
-    testTimeout: 20_000,
-    hookTimeout: 20_000,
+    // Neon puede reactivar el compute entre consultas; los flujos de integración
+    // realizan varias operaciones reales y necesitan tolerar esa latencia remota.
+    testTimeout: 120_000,
+    hookTimeout: 60_000,
   },
 });

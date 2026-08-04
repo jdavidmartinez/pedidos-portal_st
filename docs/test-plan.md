@@ -16,7 +16,7 @@ Ejecutar antes de cada commit:
 ```bash
 npm run lint
 npm run test:unit
-npx tsc --noEmit
+npm run typecheck
 npm run build
 git diff --check
 ```
@@ -50,9 +50,9 @@ la capa de integración porque depende de PostgreSQL y de las cookies de Next.js
 
 ### 3. Pruebas de API e integración con Neon
 
-Usar una base de datos de desarrollo separada de producción y limpiar los datos
-de prueba por ejecución. Configura un archivo local `.env.test` (ignorado por
-Git) con una URL de Neon exclusiva para pruebas:
+Usar una base de datos de testing separada de desarrollo y producción, y limpiar
+los datos de prueba por ejecución. La base Neon exclusiva ya fue creada y se
+configura localmente mediante `.env.test` (ignorado por Git):
 
 ```bash
 TEST_DATABASE_URL=postgresql://...
@@ -153,19 +153,76 @@ Una versión puede pasar a producción cuando:
 
 ## Pendientes explícitos
 
-- [ ] Crear y configurar `TEST_DATABASE_URL` en una base Neon independiente.
-- [ ] Ejecutar la primera batería de pruebas de API contra esa base.
-- [ ] Definir e implementar autorización por roles; actualmente existe
-  autenticación temporal compartida para cocina y administración.
-- [ ] Añadir pruebas E2E con Playwright.
-- [ ] Integrar las pruebas en CI antes de hacer merge a `master`.
-- [ ] Registrar el requisito adicional pendiente de recordar y definir su
-  criterio de aceptación antes de implementarlo.
+- [x] Crear y configurar `TEST_DATABASE_URL` en una base Neon independiente.
+- [x] Ejecutar la primera batería de pruebas de API contra esa base.
+- [x] Implementar autenticación y autorización con roles `admin` y `kitchen`.
+- [x] Permitir el cambio propio de contraseña y el restablecimiento por un
+  administrador.
+- [x] Migrar las imágenes del menú y las campañas a Vercel Blob.
+- [x] Implementar inventario de Blob, protección de imágenes compartidas,
+  retención de huérfanos durante 30 días y limpieza administrativa.
+- [x] Ampliar las pruebas de integración para cubrir administración del menú,
+  campañas, permisos por rol, límite de intentos, cierre de sesión, cambio de
+  contraseña y restablecimiento administrativo.
+- [x] Integrar lint, TypeScript, pruebas unitarias, pruebas de API y build en CI
+  antes de hacer merge a `master`.
+- [ ] Añadir pruebas E2E con Playwright para los flujos de cliente, cocina,
+  administración, autenticación, campañas y carga de imágenes.
+- [ ] Formalizar el smoke test de Preview y producción, registrando su resultado
+  por despliegue.
+- [ ] Crear una base Neon exclusiva para desarrollo local, distinta de la base
+  de testing y de producción, y documentar las variables de cada ambiente.
+- [ ] Programar la limpieza periódica de Blob y añadir pruebas de integración
+  para ese proceso.
+- [ ] Configurar observabilidad y alertas para errores `5xx`, fallos de Neon,
+  errores de Blob y fallos en la creación de pedidos.
+- [ ] Documentar la política de copias, restauración y rollback de migraciones
+  de Neon.
+- [ ] Permitir crear, activar, desactivar y cambiar roles de usuarios desde el
+  panel administrativo.
+- [ ] Realizar una revisión de accesibilidad, navegación por teclado, contraste y
+  experiencia móvil.
 
-## Orden recomendado de implementación
+## Prioridades de implementación
 
-1. Completar las pruebas unitarias de autenticación.
-2. Añadir pruebas de API con una base Neon de desarrollo.
-3. Añadir Playwright para los flujos principales.
-4. Integrar los comandos en CI antes de hacer merge a `master`.
-5. Mantener el smoke test manual de Vercel como control final.
+| Prioridad | Estado | Trabajo | Avance estimado |
+| --- | --- | --- | ---: |
+| Crítica | Completado | Ampliar la cobertura de integración de APIs | 100% |
+| Crítica | Completado | Integrar las validaciones automáticas en CI | 100% |
+| Alta | Pendiente | Implementar pruebas E2E con Playwright | 0% |
+| Alta | Manual | Formalizar el smoke test de Preview y producción | 20% |
+| Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
+| Alta | Parcial | Completar las pruebas de autenticación y seguridad | 50% |
+| Media | Parcial | Automatizar y probar la limpieza periódica de Blob | 80% |
+| Media | Parcial | Añadir observabilidad y alertas de producción | 20% |
+| Media | Parcial | Definir copias, recuperación y rollback de Neon | 20% |
+| Media | Parcial | Completar la administración de usuarios desde el panel | 30% |
+| Baja | Parcial | Revisar accesibilidad y experiencia móvil | 30% |
+
+Los porcentajes describen el avance funcional estimado y deben actualizarse al
+cerrar cada bloque. El orden recomendado es completar primero la cobertura de
+integración y CI; después automatizar los flujos E2E y formalizar el smoke test.
+
+## Integración continua en GitHub
+
+El workflow `.github/workflows/ci.yml` se ejecuta en cada pull request dirigido a
+`master`, en cada push a `master` y manualmente desde GitHub Actions. Se divide en
+dos jobs:
+
+1. `quality`: instala dependencias reproducibles con `npm ci`, restaura el caché
+   de Next.js y ejecuta lint, TypeScript, pruebas unitarias y build de producción.
+2. `api-integration`: aplica migraciones sobre la base Neon de testing y ejecuta
+   toda la batería de integración con `npm run test:api`.
+
+El repositorio de GitHub debe tener estos secretos en `Settings > Secrets and
+variables > Actions`:
+
+- `TEST_DATABASE_URL`: conexión de la base Neon exclusiva para testing. Nunca
+  debe apuntar a desarrollo ni a producción.
+- `TEST_AUTH_SECRET`: secreto largo y exclusivo para sesiones creadas durante
+  las pruebas; no debe coincidir con `AUTH_SECRET` de producción.
+
+Si falta cualquiera de esos secretos, el job de integración falla explícitamente
+en lugar de omitir las pruebas. Al configurar reglas de protección para
+`master`, deben marcarse como obligatorios los checks `Lint, types, unit tests and
+build` y `API integration tests (Neon)`.

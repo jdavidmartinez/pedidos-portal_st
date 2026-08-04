@@ -121,10 +121,16 @@ El plan de verificación está en [docs/test-plan.md](docs/test-plan.md).
 ```bash
 npm run lint
 npm run test:unit
-npx tsc --noEmit
+npm run typecheck
 npm run build
 ```
 
 Las pruebas de API contra Neon se ejecutan por separado con `npm run test:api`
 después de configurar `TEST_DATABASE_URL` en `.env.test` usando una base
 exclusiva para pruebas.
+
+GitHub Actions ejecuta estas validaciones automáticamente para pull requests y
+pushes a `master`. El job de integración requiere los secretos
+`TEST_DATABASE_URL` y `TEST_AUTH_SECRET` configurados en el repositorio; consulta
+[el plan de pruebas](docs/test-plan.md#integración-continua-en-github) para el
+detalle y la protección recomendada de la rama.
