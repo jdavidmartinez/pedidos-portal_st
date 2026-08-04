@@ -96,8 +96,17 @@ WhatsApp. El restaurante decide manualmente si aplica el descuento anunciado.
 
 `/menu` obtiene las categorías y productos activos desde `/api/menu`; el
 `/admin` permite modificar esos registros sin editar el código de la
-aplicación. Solo los usuarios con rol `admin` pueden acceder; las imágenes se
-indican mediante una ruta local o URL.
+aplicación. Solo los usuarios con rol `admin` pueden acceder. Las imágenes se
+pueden subir directamente a Vercel Blob en formato JPEG, PNG o WebP (máximo
+4 MB), o indicar mediante una ruta local o URL.
+
+Para habilitar las cargas, conecta un Blob store público al proyecto desde
+Vercel (`Storage` > `Create Database` > `Blob`). Vercel agregará
+`BLOB_READ_WRITE_TOKEN` al proyecto; vuelve a desplegar la aplicación después
+de conectarlo. Para desarrollo local, descarga las variables con
+`vercel env pull .env.local`. Las imágenes reemplazadas no se eliminan
+automáticamente para evitar borrar archivos que todavía puedan estar en uso;
+su limpieza se realiza desde el panel de Blob.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
