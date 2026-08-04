@@ -45,7 +45,7 @@ if (migrateExitCode !== 0) {
   process.exit(migrateExitCode ?? 1);
 }
 
-const tests = spawn(npmCommand, ["exec", "vitest", "run", "tests/integration"], {
+const tests = spawn(npmCommand, ["exec", "vitest", "run", "--", "--config", "vitest.integration.config.ts"], {
   stdio: "inherit",
   env: {
     ...process.env,

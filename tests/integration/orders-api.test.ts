@@ -135,7 +135,7 @@ describe("orders API against Neon", () => {
     expect(missingKey.status).toBe(400);
   });
 
-  it("sirve el catálogo activo con imágenes comic", async () => {
+  it("sirve el catálogo activo con imágenes WebP de Blob", async () => {
     const response = await getMenu();
     const body = (await response.json()) as {
       categories: Array<{ products: Array<{ imageUrl: string }> }>;
@@ -144,9 +144,10 @@ describe("orders API against Neon", () => {
 
     expect(response.status).toBe(200);
     expect(products.length).toBeGreaterThan(0);
-    expect(products.every((product) => product.imageUrl.includes("-comic.png"))).toBe(
-      true
-    );
+    expect(products.every((product) =>
+      product.imageUrl.startsWith("https://zdflakunbsel3qht.public.blob.vercel-storage.com/menu-products/")
+      && product.imageUrl.endsWith("-comic.webp")
+    )).toBe(true);
   });
 
   it("protege, pagina y actualiza órdenes desde cocina", async () => {

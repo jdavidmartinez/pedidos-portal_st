@@ -137,11 +137,9 @@ esa copia local.
 editar nombre, descripción, precios, categoría, orden, cantidad disponible,
 disponibilidad y ruta o URL de imagen. Una cantidad vacía representa inventario
 ilimitado; una cantidad de `0` oculta el producto y evita nuevos pedidos.
-También permite crear productos. La carga de archivos todavía no
-está conectada a Blob; mientras se preparan las fotos se pueden usar rutas
-locales como `/menu-comic-images/hamburguesa-portal-comic.png`. La migración
-`0007_menu_comic_images.sql` asigna automáticamente la ilustración
-correspondiente a cada producto sembrado.
+También permite crear productos y subir imágenes JPEG, PNG o WebP a Vercel
+Blob. La migración `0015_menu_blob_images.sql` trasladó las rutas históricas
+del catálogo sembrado a sus versiones WebP en Blob.
 
 ## Autenticación y autorización
 
@@ -214,7 +212,9 @@ revocables y límites compartidos de intentos de acceso.
 La migración `0012_marketing_promotions.sql` agregó el primer vínculo de
 producto y desactiva campañas anteriores que todavía no lo tengan. La migración
 `0013_promotion_products.sql` permite asociar varios productos a una misma
-promoción. Las
+promoción. `0014_campaign_popup_image.sql` agrega la imagen propia opcional de
+campaña, `0015_menu_blob_images.sql` migra el catálogo a Blob y
+`0016_blob_orphan_lifecycle.sql` registra la retención de imágenes huérfanas. Las
 columnas de descuento de órdenes se conservan únicamente por compatibilidad
 histórica.
 Los productos se pueden desactivar con `active = false` sin borrar su registro;

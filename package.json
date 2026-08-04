@@ -14,11 +14,9 @@
     "auth:create-user": "node --env-file-if-exists=.env.local scripts/create-auth-user.mjs"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.80",
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.6.1",
-    "ai": "^6.0.198",
-    "next": "16.2.7",
+    "next": "16.3.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
@@ -29,7 +27,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.7",
+    "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

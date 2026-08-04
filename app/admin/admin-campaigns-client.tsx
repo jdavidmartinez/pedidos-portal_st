@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Las vistas previas aceptan URLs administradas que no pueden limitarse a un host fijo. */
+
 import { useEffect, useState } from "react";
 import AdminImageUploader from "./admin-image-uploader";
 

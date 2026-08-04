@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Las vistas previas aceptan URLs administradas que no pueden limitarse a un host fijo. */
+
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import AdminCampaignsClient from "./admin-campaigns-client";
@@ -38,7 +40,7 @@ const EMPTY_NEW_PRODUCT = {
   description: "",
   individualPrice: 0,
   comboPrice: null as number | null,
-  imageUrl: "/menu-comic-images/hamburguesa-portal-comic.png",
+  imageUrl: "",
   availableQuantity: null as number | null,
   active: true,
   sortOrder: 0,
@@ -321,7 +323,7 @@ export default function AdminMenuClient({ username }: Props) {
                   <textarea rows={2} value={newProduct.description} onChange={(event) => setNewProduct({ ...newProduct, description: event.target.value })} className="resize-y rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
                 <label className="grid gap-1 text-[10px] font-black uppercase tracking-wider text-white/70 md:col-span-2">Ruta local o URL de imagen
-                  <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="/menu-comic-images/hamburguesa-portal-comic.png" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
+                  <input required value={newProduct.imageUrl} onChange={(event) => setNewProduct({ ...newProduct, imageUrl: event.target.value })} placeholder="Sube una imagen o pega una URL" className="rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-[#facc15]" />
                 </label>
                 <div className="flex flex-wrap items-center gap-3 md:col-span-2">
                   <AdminImageUploader
