@@ -120,6 +120,12 @@ export async function deleteEligibleOrphanedBlobs() {
     .filter((item) => item.eligibleForDeletion)
     .map((item) => item.url);
 
-  if (urls.length > 0) await del(urls);
+  if (urls.length > 0) {
+    await del(urls);
+    const sql = getSql();
+    await sql.transaction(
+      urls.map((url) => sql`DELETE FROM blob_orphan_observations WHERE url = ${url}`)
+    );
+  }
   return { deleted: urls.length, urls };
 }

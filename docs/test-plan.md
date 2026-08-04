@@ -186,7 +186,7 @@ Una versión puede pasar a producción cuando:
   por despliegue.
 - [ ] Crear una base Neon exclusiva para desarrollo local, distinta de la base
   de testing y de producción, y documentar las variables de cada ambiente.
-- [ ] Programar la limpieza periódica de Blob y añadir pruebas de integración
+- [x] Programar la limpieza periódica de Blob y añadir pruebas automatizadas
   para ese proceso.
 - [ ] Configurar observabilidad y alertas para errores `5xx`, fallos de Neon,
   errores de Blob y fallos en la creación de pedidos.
@@ -207,7 +207,7 @@ Una versión puede pasar a producción cuando:
 | Alta | Manual | Formalizar el smoke test de Preview y producción | 20% |
 | Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
 | Alta | Parcial | Completar las pruebas de autenticación y seguridad | 50% |
-| Media | Parcial | Automatizar y probar la limpieza periódica de Blob | 80% |
+| Media | Completado | Automatizar y probar la limpieza periódica de Blob | 100% |
 | Media | Parcial | Añadir observabilidad y alertas de producción | 20% |
 | Media | Parcial | Definir copias, recuperación y rollback de Neon | 20% |
 | Media | Parcial | Completar la administración de usuarios desde el panel | 30% |

@@ -109,8 +109,15 @@ de conectarlo. Para desarrollo local, descarga las variables con
 `vercel env pull .env.local`. Las imágenes reemplazadas no se eliminan de
 inmediato. `/admin` compara Blob con todas las referencias de productos y
 campañas; conserva los archivos huérfanos durante 30 días desde su primera
-detección y luego permite eliminarlos manualmente. Las imágenes compartidas o
-todavía vinculadas nunca se marcan como eliminables.
+detección y luego permite eliminarlos manualmente. Además, Vercel ejecuta
+diariamente `/api/cron/blob-cleanup` a las 10:00 UTC. El endpoint exige
+`CRON_SECRET` y aplica exactamente la misma política de retención. Las imágenes
+compartidas o todavía vinculadas nunca se marcan como eliminables.
+
+Configura `CRON_SECRET` en Vercel para Production con una cadena aleatoria de al
+menos 16 caracteres. Vercel la enviará automáticamente como
+`Authorization: Bearer <CRON_SECRET>` en cada ejecución programada. El cron se
+registra al desplegar `vercel.json` y puede consultarse en `Settings > Cron Jobs`.
 
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
