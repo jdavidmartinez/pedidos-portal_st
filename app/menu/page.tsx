@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- El catálogo admite URLs configurables por el administrador. */
 
 import Image from 'next/image';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CategoriasMenu, Producto } from './data';
 import type { Order } from '@/types/order';
 import { DATA_PROCESSING_POLICY_VERSION } from '@/lib/privacy/data-processing';
@@ -113,6 +113,16 @@ export default function LandingMenuPage() {
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
   const [submitError, setSubmitError] = useState('');
+  const campaignDialogRef = useRef<HTMLElement>(null);
+  const orderDialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const orderSubmittedRef = useRef(orderSubmitted);
+  const rememberCustomerRef = useRef(rememberCustomer);
+
+  useEffect(() => {
+    orderSubmittedRef.current = orderSubmitted;
+    rememberCustomerRef.current = rememberCustomer;
+  }, [orderSubmitted, rememberCustomer]);
 
   useEffect(() => {
     const remembered = readRememberedCustomer();
@@ -227,12 +237,12 @@ export default function LandingMenuPage() {
     }));
   };
 
-  const cerrarChat = () => {
+  const cerrarChat = useCallback(() => {
     setIsChatOpen(false);
 
-    if (orderSubmitted) {
+    if (orderSubmittedRef.current) {
       setCantidades({});
-      if (!rememberCustomer) {
+      if (!rememberCustomerRef.current) {
         setCustomerName('');
         setDeliveryAddress('');
         setPhoneNumber('');
@@ -247,7 +257,65 @@ export default function LandingMenuPage() {
       setSubmitError('');
       setIsGeminiMode(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const dialog = showCampaign
+      ? campaignDialogRef.current
+      : isChatOpen
+        ? orderDialogRef.current
+        : null;
+    if (!dialog) return;
+
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusableSelector = [
+      'button:not([disabled])',
+      'a[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+    const firstControl = dialog.querySelector<HTMLElement>(focusableSelector);
+    window.requestAnimationFrame(() => (firstControl ?? dialog).focus());
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (showCampaign) setShowCampaign(false);
+        else cerrarChat();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (controls.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocusedRef.current?.focus();
+    };
+  }, [cerrarChat, isChatOpen, showCampaign]);
 
   const forgetCustomerDetails = () => {
     clearRememberedCustomer();
@@ -575,9 +643,9 @@ export default function LandingMenuPage() {
                     </div>
                     <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
                       {/* Counter interface colors adjusted to hover on brand red #B03336 */}
-                      <button aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="h-8 w-8 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
-                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
-                      <button aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="h-8 w-8 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">+</button>
+                      <button type="button" aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="h-11 w-11 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
+                      <span aria-live="polite" aria-label={`${cantidadActual} unidades de ${plato.nombre}`} style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
+                      <button type="button" aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="h-11 w-11 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">+</button>
                     </div>
                   </div>
                 </div>
@@ -591,10 +659,13 @@ export default function LandingMenuPage() {
       {campaign && showCampaign && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
           <section
+            ref={campaignDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="promotion-title"
-            className="relative w-full max-w-md overflow-hidden rounded-3xl border-2 border-[#facc15]/80 bg-[#171717] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]"
+            aria-describedby="promotion-description"
+            tabIndex={-1}
+            className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border-2 border-[#facc15]/80 bg-[#171717] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]"
           >
             <button
               type="button"
@@ -653,7 +724,7 @@ export default function LandingMenuPage() {
                 </div>
               </div>
 
-              <p style={{ fontFamily: fontSecondary }} className="mt-4 text-xs leading-relaxed text-white/60">
+              <p id="promotion-description" style={{ fontFamily: fontSecondary }} className="mt-4 text-xs leading-relaxed text-white/75">
                 Promoción informativa. El restaurante confirmará y aplicará manualmente el descuento al facturar.
               </p>
               <button
@@ -673,12 +744,19 @@ export default function LandingMenuPage() {
       {isChatOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           {/* Modal layout framing accented using #B03336 */}
-          <div className="bg-[#201E1E] w-full sm:max-w-md h-[85vh] sm:h-[650px] rounded-t-2xl sm:rounded-2xl border-2 border-[#B03336]/40 flex flex-col justify-between shadow-2xl overflow-hidden">
+          <div
+            ref={orderDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-dialog-title"
+            tabIndex={-1}
+            className="flex h-[92dvh] w-full flex-col justify-between overflow-hidden rounded-t-2xl border-2 border-[#B03336]/40 bg-[#201E1E] shadow-2xl sm:h-[650px] sm:max-w-md sm:rounded-2xl"
+          >
             
             <div className="p-4 border-b border-neutral-850 flex justify-between items-center bg-neutral-950">
-              <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-[#B03336]">
+              <h2 id="order-dialog-title" style={{ fontFamily: fontMain, fontWeight: 700 }} className="font-bold text-xs tracking-wider uppercase text-red-300">
                 {orderSubmitted ? 'Pedido recibido' : isGeminiMode ? 'Asistente Gemini' : 'Confirmar pedido'}
-              </span>
+              </h2>
               <button
                 onClick={cerrarChat}
                 style={{ fontFamily: fontMain, fontWeight: 700 }}
@@ -816,8 +894,10 @@ export default function LandingMenuPage() {
                     <p style={{ fontFamily: fontSecondary }} className="mt-2 text-[11px] text-white">El domicilio se confirma por separado con el restaurante.</p>
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Nombre Completo</label>
+                    <label htmlFor="customer-name" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Nombre Completo</label>
                     <input 
+                      id="customer-name"
+                      autoComplete="name"
                       type="text" required value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Tu nombre"
@@ -825,8 +905,10 @@ export default function LandingMenuPage() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Dirección de Envío</label>
+                    <label htmlFor="delivery-address" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Dirección de Envío</label>
                     <input 
+                      id="delivery-address"
+                      autoComplete="street-address"
                       type="text" required value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Ej. Calle 10 #14-25"
@@ -834,8 +916,10 @@ export default function LandingMenuPage() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Teléfono Celular</label>
+                    <label htmlFor="customer-phone" style={{ fontFamily: fontSecondary }} className="block text-[11px] uppercase font-bold text-white mb-1">Teléfono Celular</label>
                     <input 
+                      id="customer-phone"
+                      autoComplete="tel"
                       type="tel" required value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="Ej. 3213166885"
@@ -917,6 +1001,7 @@ export default function LandingMenuPage() {
               <form onSubmit={manejarEnvioManual} className="p-3 border-t border-neutral-800 bg-neutral-950 flex gap-2">
                 <input 
                   type="text" value={inputUsuario} 
+                  aria-label="Mensaje para Gemini"
                   onChange={(e) => setInputUsuario(e.target.value)}
                   placeholder="Escribe a Gemini..." 
                   className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-[#FEFEFE] focus:outline-none focus:border-[#B03336]"

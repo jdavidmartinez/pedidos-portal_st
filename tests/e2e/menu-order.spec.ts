@@ -106,3 +106,51 @@ test("muestra una campaña y completa el flujo del pedido sin escribir en Neon",
     dataConsentVersion: "v3",
   });
 });
+
+test("permite navegar el menú con teclado y sin desbordamiento en móvil", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.route("**/api/menu", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        categories: [{ name: "Especiales E2E", products: [product] }],
+        campaign: {
+          id: "campaign-accessibility",
+          name: "PROMOCIÓN ACCESIBLE",
+          imageUrl: product.imageUrl,
+          products: [{ id: product.id, name: product.name, imageUrl: product.imageUrl }],
+          discountPercent: 15,
+          startsOn: "2026-08-01",
+          endsOn: "2026-08-31",
+        },
+      }),
+    });
+  });
+
+  await page.goto("/menu");
+  await expect(page.locator("html")).toHaveAttribute("lang", "es-CO");
+
+  const promotion = page.getByRole("dialog", { name: "PROMOCIÓN ACCESIBLE" });
+  await expect(promotion).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar promoción" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(promotion).toBeHidden();
+
+  const addButton = page.getByRole("button", { name: `Agregar una unidad de ${product.name}` });
+  await addButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel(`1 unidades de ${product.name}`)).toBeVisible();
+  await page.getByRole("button", { name: "Continuar con el pedido" }).click();
+
+  const orderDialog = page.getByRole("dialog", { name: "Confirmar pedido" });
+  await expect(orderDialog).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar" })).toBeFocused();
+  await expect(page.getByLabel("Nombre Completo")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(orderDialog).toBeHidden();
+
+  const horizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(horizontalOverflow).toBe(false);
+});
