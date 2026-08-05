@@ -16,6 +16,7 @@ const order: Order = {
   items: [
     {
       name: "HAMBURGUESA PORTAL",
+      variant: "combo",
       quantity: 2,
       unitPrice: 18000,
       lineTotal: 36000,
@@ -41,6 +42,7 @@ describe("buildOrderWhatsAppMessage", () => {
     expect(message).toContain("PORTAL ST");
     expect(message).not.toContain("NUEVO PEDIDO");
     expect(message).toContain("Domicilio: $ 7.000");
+    expect(message).toContain("HAMBURGUESA PORTAL (Combo)");
     expect(message).toContain("Total: $ 43.000");
     expect(message).toContain("Observaciones del cliente: Sin cebolla");
   });

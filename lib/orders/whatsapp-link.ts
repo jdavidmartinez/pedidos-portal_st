@@ -23,7 +23,7 @@ export function buildOrderWhatsAppMessage(
   const items = order.items
     .map(
       (item) =>
-        `${item.quantity}x ${item.name} — ${formatCOP(item.lineTotal)}`
+        `${item.quantity}x ${item.name} (${item.variant === "combo" ? "Combo" : "Individual"}) — ${formatCOP(item.lineTotal)}`
     )
     .join("\n");
   const deliveryLine =

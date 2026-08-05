@@ -31,15 +31,18 @@ Una orden contiene:
 - observaciones opcionales del cliente (máximo 500 caracteres);
 - versión y fecha de aceptación del aviso de tratamiento de datos personales;
 - clave de idempotencia para evitar duplicados por reintentos;
-- productos, cantidades, precios unitarios y totales por línea;
+- productos, presentación individual o combo, cantidades, precios unitarios y
+  totales por línea;
 - subtotal, domicilio y total;
 - instantánea histórica de campaña y descuento para órdenes creadas antes del
   modelo de promociones informativas;
 - estado;
 - fecha de recepción, última actualización y finalización.
 
-El navegador no decide los precios. Solo envía nombres y cantidades; el servidor
-valida cada producto activo en `menu_products` y calcula los valores canónicos.
+El navegador no decide los precios. Solo envía nombres, presentación y
+cantidades; el servidor valida cada producto activo en `menu_products`, confirma
+que la presentación combo esté disponible y calcula el precio individual o de
+combo canónico.
 
 Una promoción activa se selecciona por la fecha local de Colombia y se muestra
 en un popup al abrir `/menu`. El anuncio incluye título, productos, imagen,
@@ -56,6 +59,9 @@ en lugar de insertar una nueva.
 El catálogo visible de `/menu` se carga desde `GET /api/menu`. Las categorías,
 precios, imágenes y disponibilidad se mantienen en Neon para que la futura
 sección de administración pueda actualizarlos sin modificar el código.
+`docs/menu-portal-st.json` conserva la versión aprobada por el cliente como
+referencia legible y la migración `0018_sync_client_menu.sql` sincroniza sus 3
+secciones, 43 productos, descripciones y precios con Neon.
 
 ## Estados
 
@@ -139,6 +145,13 @@ esa copia local.
 editar nombre, descripción, precios, categoría, orden, cantidad disponible,
 disponibilidad y ruta o URL de imagen. Una cantidad vacía representa inventario
 ilimitado; una cantidad de `0` oculta el producto y evita nuevos pedidos.
+El precio combo es opcional: cuando existe, `/menu` presenta dos alternativas
+independientes para agregar el producto a la orden; cuando está vacío, solo
+ofrece la presentación individual.
+
+El asistente Gemini consulta el mismo catálogo activo de Neon en cada petición.
+Recibe sección, nombre, descripción, precio individual y precio combo, por lo
+que no mantiene una copia separada del menú ni precios definidos en el código.
 También permite crear productos y subir imágenes JPEG, PNG o WebP a Vercel
 Blob. La migración `0015_menu_blob_images.sql` trasladó las rutas históricas
 del catálogo sembrado a sus versiones WebP en Blob.
@@ -175,9 +188,10 @@ También se aceptan números internacionales que ya incluyan su código de país
 whatsapp://send?phone=<telefono>&text=<mensaje-codificado>
 ```
 
-El mensaje incluye número de orden, productos, subtotal, domicilio, total,
-observaciones (si existen) y la pregunta de confirmación. Una persona debe
-revisar y enviar el mensaje desde WhatsApp.
+El mensaje incluye número de orden, productos con su presentación individual o
+combo, subtotal, domicilio, total, observaciones (si existen) y la pregunta de
+confirmación. La misma presentación queda visible en cocina y en la exportación
+CSV. Una persona debe revisar y enviar el mensaje desde WhatsApp.
 
 `/cocina` mantiene disponible el botón de envío aunque el domicilio no esté
 definido. En ese caso el mensaje usa `costo domicilio sin definir` y un total

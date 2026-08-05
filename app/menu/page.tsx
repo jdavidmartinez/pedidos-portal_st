@@ -30,6 +30,14 @@ interface RememberedCustomerDetails {
   savedAt: number;
 }
 
+type ProductVariant = 'individual' | 'combo';
+
+const quantityKey = (name: string, variant: ProductVariant) => `${name}\u0000${variant}`;
+const splitQuantityKey = (key: string) => {
+  const [name, variant] = key.split('\u0000');
+  return { name, variant: variant === 'combo' ? 'combo' as const : 'individual' as const };
+};
+
 const REMEMBERED_CUSTOMER_KEY = 'portal-st:remembered-customer:v1';
 const REMEMBERED_CUSTOMER_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -210,15 +218,19 @@ export default function LandingMenuPage() {
     () =>
       Object.entries(cantidades)
         .filter(([, quantity]) => quantity > 0)
-        .map(([name, quantity]) => {
+        .map(([key, quantity]) => {
+          const { name, variant } = splitQuantityKey(key);
           const product = Object.values(menu)
             .flat()
             .find((item) => item.nombre === name);
 
           return {
             name,
+            variant,
             quantity,
-            unitPrice: product?.precioIndividual ?? 0,
+            unitPrice: variant === 'combo'
+              ? product?.precioCombo ?? 0
+              : product?.precioIndividual ?? 0,
           };
         }),
     [cantidades, menu]
@@ -230,10 +242,11 @@ export default function LandingMenuPage() {
     0
   );
 
-  const cambiarCantidad = (nombre: string, incremento: number) => {
+  const cambiarCantidad = (nombre: string, variant: ProductVariant, incremento: number) => {
+    const key = quantityKey(nombre, variant);
     setCantidades(prev => ({
       ...prev,
-      [nombre]: Math.max(0, (prev[nombre] || 0) + incremento)
+      [key]: Math.max(0, (prev[key] || 0) + incremento)
     }));
   };
 
@@ -347,9 +360,8 @@ export default function LandingMenuPage() {
     setSubmitError('');
     setOrderIdempotencyKey(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     
-    const seleccionados = Object.entries(cantidades)
-      .filter(([, qty]) => qty > 0)
-      .map(([name, qty]) => `${qty}x ${name}`);
+    const seleccionados = itemsSeleccionados
+      .map((item) => `${item.quantity}x ${item.name} (${item.variant === 'combo' ? 'Combo' : 'Individual'})`);
 
     if (seleccionados.length > 0) {
       const ordenInicial = `Hola, quiero ordenar los siguientes productos del menú:\n${seleccionados.join('\n')}.\nPor favor calcula el precio total y confirma mi pedido en español. Recuerda informarme explícitamente que el costo NO incluye el domicilio, y que el valor del envío será confirmado por el restaurante al enviar el pedido.`;
@@ -404,9 +416,7 @@ export default function LandingMenuPage() {
     e.preventDefault();
     if (!customerName.trim() || !deliveryAddress.trim() || !phoneNumber.trim()) return;
 
-    const items = Object.entries(cantidades)
-      .filter(([, qty]) => qty > 0)
-      .map(([name, quantity]) => ({ name, quantity }));
+    const items = itemsSeleccionados.map(({ name, variant, quantity }) => ({ name, variant, quantity }));
 
     if (items.length === 0) {
       setSubmitError('Selecciona al menos un producto del menú antes de enviar el pedido.');
@@ -516,8 +526,16 @@ export default function LandingMenuPage() {
       <section className="relative mx-auto w-full max-w-4xl overflow-hidden border-y border-[#B03336]/70 bg-[#171717] shadow-[0_14px_35px_rgba(0,0,0,0.38)]">
         <div className="h-1 w-full bg-gradient-to-r from-[#B03336] via-[#facc15] to-[#B03336]" />
         <div className="px-4 pb-4 pt-3 sm:px-5">
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
+          <div className="mb-3 flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 flex-col justify-center gap-1.5 rounded-xl border border-[#facc15]/60 bg-black/35 px-2.5 shadow-inner"
+            >
+              <span className="h-0.5 w-full rounded-full bg-[#facc15]" />
+              <span className="h-0.5 w-full rounded-full bg-[#facc15]" />
+              <span className="h-0.5 w-full rounded-full bg-[#facc15]" />
+            </span>
+            <div className="min-w-0">
               <p
                 style={{ fontFamily: fontMain, fontWeight: 700 }}
                 className="text-[10px] uppercase tracking-[0.28em] text-[#facc15]"
@@ -531,16 +549,13 @@ export default function LandingMenuPage() {
                 Elige una sección
               </h2>
             </div>
-            <p className="shrink-0 text-[10px] uppercase tracking-wider text-white/45 sm:hidden">
-              Desliza →
-            </p>
           </div>
 
           <nav
             aria-label="Secciones del menú"
-            className="flex w-full gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-3"
+            className="flex w-full flex-col gap-2"
           >
-            {Object.keys(menu).map((cat) => {
+            {Object.keys(menu).map((cat, index) => {
               const active = categoriaActiva === cat;
               return (
                 <button
@@ -549,17 +564,33 @@ export default function LandingMenuPage() {
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setCategoriaActiva(cat)}
                   style={{ fontFamily: fontMain, fontWeight: 700 }}
-                  className={`relative min-w-[72vw] shrink-0 overflow-hidden rounded-xl border-2 px-5 py-3.5 text-sm font-bold uppercase tracking-wider transition-all duration-200 sm:min-w-0 ${
+                  className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border px-3 py-3 text-left font-bold uppercase tracking-wider transition-all duration-200 ${
                     active
-                      ? 'border-[#facc15] bg-[#B03336] text-white shadow-[0_8px_24px_rgba(176,51,54,0.38)]'
+                      ? 'border-[#facc15] bg-[#B03336] text-white shadow-[0_8px_24px_rgba(176,51,54,0.3)]'
                       : 'border-white/15 bg-[#252323] text-white/75 hover:border-[#B03336] hover:bg-[#2d2929] hover:text-white'
                   }`}
                 >
-                  {cat}
                   <span
                     aria-hidden="true"
-                    className={`absolute inset-x-5 bottom-0 h-1 rounded-t-full bg-[#facc15] transition-transform duration-200 ${
-                      active ? 'scale-x-100' : 'scale-x-0'
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[10px] transition-colors ${
+                      active
+                        ? 'border-white/40 bg-black/20 text-[#facc15]'
+                        : 'border-white/10 bg-black/25 text-white/45 group-hover:text-[#facc15]'
+                    }`}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm sm:text-base">{cat}</span>
+                  <span
+                    aria-hidden="true"
+                    className={`text-lg transition-transform duration-200 ${active ? 'rotate-90 text-[#facc15]' : 'text-white/35 group-hover:translate-x-0.5 group-hover:text-white'}`}
+                  >
+                    ›
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#facc15] transition-transform duration-200 ${
+                      active ? 'scale-y-100' : 'scale-y-0'
                     }`}
                   />
                 </button>
@@ -618,7 +649,8 @@ export default function LandingMenuPage() {
         {!menuLoading && !menuError && (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {menu[categoriaActiva]?.map((plato: Producto, idx: number) => {
-            const cantidadActual = cantidades[plato.nombre] || 0;
+            const cantidadIndividual = cantidades[quantityKey(plato.nombre, 'individual')] || 0;
+            const cantidadCombo = cantidades[quantityKey(plato.nombre, 'combo')] || 0;
             return (
               /* Hover cards border line highlighted with brand red #B03336 */
               <div key={idx} className="bg-[#201E1E]/95 rounded-2xl overflow-hidden border-2 border-neutral-800/60 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:border-[#B03336]/50">
@@ -634,20 +666,34 @@ export default function LandingMenuPage() {
                       {plato.descripcion}
                     </p>
                   </div>
-                  <div className="mt-5 pt-3 border-t border-neutral-800/60 flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-white/65 uppercase font-black tracking-wider">Individual</span>
-                      <span style={{ fontFamily: fontMain, fontWeight: 700 }} className="text-xl text-[#FEFEFE]">
-                        {formatCOP(plato.precioIndividual)}
-                      </span>
+                  <fieldset className="mt-4 border-t border-neutral-800/60 pt-2.5">
+                    <legend className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/65">Elige tu presentación</legend>
+                    <div className={`mt-1.5 grid gap-1.5 ${plato.precioCombo !== null && plato.precioCombo !== undefined ? 'sm:grid-cols-2' : ''}`}>
+                      <ProductOption
+                        productName={plato.nombre}
+                        variant="individual"
+                        label="Individual"
+                        price={plato.precioIndividual}
+                        quantity={cantidadIndividual}
+                        onChange={cambiarCantidad}
+                        formatPrice={formatCOP}
+                        fontFamily={fontMain}
+                      />
+                      {plato.precioCombo !== null && plato.precioCombo !== undefined && (
+                        <ProductOption
+                          productName={plato.nombre}
+                          variant="combo"
+                          label="Combo"
+                          price={plato.precioCombo}
+                          quantity={cantidadCombo}
+                          onChange={cambiarCantidad}
+                          formatPrice={formatCOP}
+                          fontFamily={fontMain}
+                          featured
+                        />
+                      )}
                     </div>
-                    <div className="flex items-center bg-black/50 rounded-xl p-1 border border-neutral-800">
-                      {/* Counter interface colors adjusted to hover on brand red #B03336 */}
-                      <button type="button" aria-label={`Quitar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, -1)} className="h-11 w-11 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
-                      <span aria-live="polite" aria-label={`${cantidadActual} unidades de ${plato.nombre}`} style={{ fontFamily: fontMain, fontWeight: 700 }} className="w-8 text-center text-base text-[#FEFEFE]">{cantidadActual}</span>
-                      <button type="button" aria-label={`Agregar una unidad de ${plato.nombre}`} onClick={() => cambiarCantidad(plato.nombre, 1)} className="h-11 w-11 rounded-md bg-neutral-800 text-lg font-bold text-white transition-colors hover:bg-[#B03336]">+</button>
-                    </div>
-                  </div>
+                  </fieldset>
                 </div>
               </div>
             );
@@ -817,8 +863,8 @@ export default function LandingMenuPage() {
                     </p>
                     <ul className="space-y-1.5 text-xs text-white">
                       {submittedOrder.items.map((item) => (
-                        <li key={item.name} className="flex justify-between gap-3">
-                          <span>{item.quantity}x {item.name}</span>
+                        <li key={`${item.name}-${item.variant}`} className="flex justify-between gap-3">
+                          <span>{item.quantity}x {item.name} <strong className="text-[#facc15]">({item.variant === 'combo' ? 'Combo' : 'Individual'})</strong></span>
                           <span className="shrink-0 text-white/60">{formatCOP(item.lineTotal)}</span>
                         </li>
                       ))}
@@ -885,8 +931,8 @@ export default function LandingMenuPage() {
                     </div>
                     <ul className="space-y-1 text-xs font-medium text-white">
                       {itemsSeleccionados.map((item) => (
-                        <li key={item.name} className="flex justify-between gap-3">
-                          <span>{item.quantity}x {item.name}</span>
+                        <li key={`${item.name}-${item.variant}`} className="flex justify-between gap-3">
+                          <span>{item.quantity}x {item.name} <strong className="text-[#facc15]">({item.variant === 'combo' ? 'Combo' : 'Individual'})</strong></span>
                           <span className="shrink-0">{formatCOP(item.quantity * item.unitPrice)}</span>
                         </li>
                       ))}
@@ -1013,6 +1059,46 @@ export default function LandingMenuPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ProductOption({
+  productName,
+  variant,
+  label,
+  price,
+  quantity,
+  onChange,
+  formatPrice,
+  fontFamily,
+  featured = false,
+}: {
+  productName: string;
+  variant: ProductVariant;
+  label: string;
+  price: number;
+  quantity: number;
+  onChange: (name: string, variant: ProductVariant, increment: number) => void;
+  formatPrice: (value: number) => string;
+  fontFamily: string;
+  featured?: boolean;
+}) {
+  const accessibleVariant = variant === 'combo' ? 'combo' : 'individual';
+  return (
+    <div className={`flex min-h-12 items-center gap-2 rounded-lg border px-2 py-1.5 ${featured ? 'border-[#facc15]/65 bg-[#B03336]/15' : 'border-white/15 bg-black/35'}`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          {featured && <span aria-hidden="true" className="text-[9px] text-[#facc15]">★</span>}
+          <span className={`truncate text-[9px] font-black uppercase tracking-wider ${featured ? 'text-[#facc15]' : 'text-white/60'}`}>{label}</span>
+        </div>
+        <p style={{ fontFamily, fontWeight: 700 }} className="whitespace-nowrap text-sm leading-tight text-white">{formatPrice(price)}</p>
+      </div>
+      <div className="flex shrink-0 items-center rounded-md border border-white/10 bg-black/45 p-0.5">
+        <button type="button" aria-label={`Quitar un ${accessibleVariant} de ${productName}`} onClick={() => onChange(productName, variant, -1)} className="h-10 w-10 rounded text-base font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
+        <span aria-live="polite" aria-label={`${quantity} unidades en presentación ${accessibleVariant} de ${productName}`} style={{ fontFamily, fontWeight: 700 }} className="w-6 text-center text-sm text-white">{quantity}</span>
+        <button type="button" aria-label={`Agregar un ${accessibleVariant} de ${productName}`} onClick={() => onChange(productName, variant, 1)} className={`h-10 w-10 rounded text-base font-bold text-white transition-colors ${featured ? 'bg-[#B03336] hover:bg-[#c74346]' : 'hover:bg-[#B03336]'}`}>+</button>
+      </div>
     </div>
   );
 }

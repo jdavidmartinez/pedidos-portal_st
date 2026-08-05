@@ -113,23 +113,31 @@ function buildItems(
   input: Pick<CreateOrderInput, "items">,
   productsByName: Map<string, MenuProduct>
 ): OrderItem[] {
-  const quantities = new Map<string, number>();
+  const quantities = new Map<string, { name: string; variant: "individual" | "combo"; quantity: number }>();
 
   for (const item of input.items) {
-    quantities.set(item.name, (quantities.get(item.name) ?? 0) + item.quantity);
+    const variant = item.variant ?? "individual";
+    const key = `${item.name}\u0000${variant}`;
+    const current = quantities.get(key);
+    quantities.set(key, { name: item.name, variant, quantity: (current?.quantity ?? 0) + item.quantity });
   }
 
-  return Array.from(quantities, ([name, quantity]) => {
+  return Array.from(quantities.values(), ({ name, variant, quantity }) => {
     const product = productsByName.get(name);
     if (!product) {
       throw new InvalidOrderItemError(`El producto "${name}" no existe en el menú.`);
     }
 
+    if (variant === "combo" && product.comboPrice === null) {
+      throw new InvalidOrderItemError(`El producto "${name}" no está disponible como combo.`);
+    }
+    const unitPrice = variant === "combo" ? product.comboPrice! : product.individualPrice;
     return {
       name,
+      variant,
       quantity,
-      unitPrice: product.individualPrice,
-      lineTotal: product.individualPrice * quantity,
+      unitPrice,
+      lineTotal: unitPrice * quantity,
     };
   });
 }
@@ -153,6 +161,7 @@ function toOrder(row: OrderRow): Order {
       const itemRecord = item as Record<string, unknown>;
       return {
         name: String(itemRecord.name),
+        variant: itemRecord.variant === "combo" ? "combo" : "individual",
         quantity: Number(itemRecord.quantity),
         unitPrice: Number(itemRecord.unitPrice),
         lineTotal: Number(itemRecord.lineTotal),
@@ -202,9 +211,9 @@ class PostgresOrderRepository implements OrderRepository {
     const itemQueries = items.map(
       (item, itemIndex) => sql`
         INSERT INTO order_items (
-          order_id, item_index, name, quantity, unit_price, line_total
+          order_id, item_index, name, variant, quantity, unit_price, line_total
         ) VALUES (
-          ${orderId}, ${itemIndex}, ${item.name}, ${item.quantity},
+          ${orderId}, ${itemIndex}, ${item.name}, ${item.variant}, ${item.quantity},
           ${item.unitPrice}, ${item.lineTotal}
         )
       `
@@ -275,6 +284,7 @@ class PostgresOrderRepository implements OrderRepository {
           json_agg(
             json_build_object(
               'name', oi.name,
+              'variant', oi.variant,
               'quantity', oi.quantity,
               'unitPrice', oi.unit_price,
               'lineTotal', oi.line_total
@@ -370,10 +380,10 @@ class PostgresOrderRepository implements OrderRepository {
             ...items.map(
               (item, itemIndex) => sql`
                 INSERT INTO order_items (
-                  order_id, item_index, name, quantity, unit_price, line_total
+                  order_id, item_index, name, variant, quantity, unit_price, line_total
                 )
                 SELECT
-                  ${id}, ${itemIndex}, ${item.name}, ${item.quantity},
+                  ${id}, ${itemIndex}, ${item.name}, ${item.variant}, ${item.quantity},
                   ${item.unitPrice}, ${item.lineTotal}
                 WHERE EXISTS (
                   SELECT 1 FROM orders WHERE id = ${id} AND status = 'received'
@@ -513,6 +523,7 @@ class PostgresOrderRepository implements OrderRepository {
           json_agg(
             json_build_object(
               'name', oi.name,
+              'variant', oi.variant,
               'quantity', oi.quantity,
               'unitPrice', oi.unit_price,
               'lineTotal', oi.line_total
@@ -558,6 +569,7 @@ class PostgresOrderRepository implements OrderRepository {
           json_agg(
             json_build_object(
               'name', oi.name,
+              'variant', oi.variant,
               'quantity', oi.quantity,
               'unitPrice', oi.unit_price,
               'lineTotal', oi.line_total

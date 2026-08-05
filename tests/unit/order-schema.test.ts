@@ -18,6 +18,15 @@ describe("createOrderSchema", () => {
     const result = createOrderSchema.safeParse(validOrder);
 
     expect(result.success).toBe(true);
+    if (result.success) expect(result.data.items[0].variant).toBe("individual");
+  });
+
+  it("acepta explícitamente una presentación combo", () => {
+    const result = createOrderSchema.safeParse({
+      ...validOrder,
+      items: [{ name: "HAMBURGUESA PORTAL", quantity: 1, variant: "combo" }],
+    });
+    expect(result.success).toBe(true);
   });
 
   it("rechaza una orden sin consentimiento", () => {

@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "currency": "COP",
+  "sections": [
+    {
+      "name": "Hamburguesas",
+      "products": [
+        {
+          "name": "HAMBURGUESA DEL BARRIO",
+          "description": "120 gramos de carne artesanal, queso, tocineta, lechuga, tomate, cebolla, papa fosforito y salsa de la casa.",
+          "individualPrice": 16500,
+          "comboPrice": 26300
+        },
+        {
+          "name": "HAMBURGUESA PORTAL",
+          "description": "150 gramos de carne artesanal, queso, tocineta, lechuga, tomate, cebolla.",
+          "individualPrice": 18000,
+          "comboPrice": 27800
+        },
+        {
+          "name": "HAMBURGUESA PORTAZO",
+          "description": "Dos carnes de 150 gramos artesanal, doble queso, tocineta, lechuga, tomate, cebolla.",
+          "individualPrice": 28000,
+          "comboPrice": 37800
+        },
+        {
+          "name": "HAMBURGUESA DE POLLO",
+          "description": "Filete de pollo, queso, tocineta, lechuga, tomate, cebolla.",
+          "individualPrice": 18500,
+          "comboPrice": 28300
+        },
+        {
+          "name": "HAMBURGUESA RANCHERA",
+          "description": "150 gramos de carne artesanal, salchicha ranchera, en salsa BBQ, maicitos, queso, tocineta, lechuga, tomate, cebolla.",
+          "individualPrice": 22500,
+          "comboPrice": 32300
+        },
+        {
+          "name": "AREPA BURGUER",
+          "description": "150 gramos de carne artesanal, queso, tocineta, cebolla en salsa BBQ, tomate, tajada de plátano maduro y arepa asada al carbón.",
+          "individualPrice": 19000,
+          "comboPrice": 28800
+        },
+        {
+          "name": "HAMBURGUESA JUNIOR",
+          "description": "100 gramos de carne artesanal, queso, tocineta, lechuga, tomate, cebolla.",
+          "individualPrice": 14500,
+          "comboPrice": 24300
+        },
+        {
+          "name": "HAMBURGUESA DE QUESO",
+          "description": "150 gramos de carne artesanal, Tocineta, triple queso.",
+          "individualPrice": 19500,
+          "comboPrice": 28800
+        },
+        {
+          "name": "HAMBURGUESA NORTEÑA",
+          "description": "120 gramos de carne desmechada, un toque de picante, salsa frijol sofrito, Tocineta, queso, aros de cebolla, pepino agridulce, lechuga, tomate, cebolla.",
+          "individualPrice": 23500,
+          "comboPrice": 33300
+        },
+        {
+          "name": "HAMBURGUESA ITALIANA",
+          "description": "150 gramos de carne artesanal, queso, cebolla en salsa italiana con tocineta crocante, tomate, lechuga, pepperoni y pan cubierto de queso fundido con pepperoni.",
+          "individualPrice": 23500,
+          "comboPrice": 33300
+        },
+        {
+          "name": "MIXTA PORTAL-NORTEÑA",
+          "description": "Carne Portal y carne desmechada con un toque picante, doble queso, tocineta, lechuga, tomate y cebolla.",
+          "individualPrice": 28000,
+          "comboPrice": 37800
+        },
+        {
+          "name": "MIXTA PORTAL-POLLO",
+          "description": "Carne Portal y carne de pollo, doble queso, tocineta, lechuga, tomate y cebolla.",
+          "individualPrice": 28000,
+          "comboPrice": 37800
+        }
+      ]
+    },
+    {
+      "name": "Perros y Sándwiches",
+      "products": [
+        {
+          "name": "PERRO PORTAL",
+          "description": "Salchicha Zenú tipo americano, pan artesanal, doble queso, tocineta, cebolla, papa fosforito y salsa tártara Portal.",
+          "individualPrice": 14500,
+          "comboPrice": 24300
+        },
+        {
+          "name": "PERRA PORTAL",
+          "description": "Tocineta, pan artesanal, doble queso, salsa tártara Portal.",
+          "individualPrice": 15000,
+          "comboPrice": 24800
+        },
+        {
+          "name": "PERRO NORTEÑO",
+          "description": "Salchicha Zenú tipo americano, carne desmechada con salsa de frijol sofrito y un toque picante, pan artesanal, doble queso y salsa tártara Portal.",
+          "individualPrice": 16500,
+          "comboPrice": 26300
+        },
+        {
+          "name": "SÁNDWICH DE POLLO",
+          "description": "Pechuga a la plancha, pan, queso, lechuga, tomate y salsa de ajo Portal.",
+          "individualPrice": 13500,
+          "comboPrice": 23300
+        },
+        {
+          "name": "SÁNDWICH DE JAMÓN",
+          "description": "Jamón, pan, queso, lechuga, tomate y salsa de ajo Portal.",
+          "individualPrice": 12500,
+          "comboPrice": 22300
+        },
+        {
+          "name": "SÁNDWICH NORTEÑO",
+          "description": "Carne desmechada con salsa de frijol sofrito y un toque picante, pan, queso, lechuga, tomate y salsa de ajo Portal.",
+          "individualPrice": 14500,
+          "comboPrice": 24300
+        },
+        {
+          "name": "PECHUGA A LA PLANCHA",
+          "description": "180 g de filete de pollo a la plancha, gratinado con queso mozzarella y un toque de finas hierbas. Acompañado de papa a la francesa, tomate y lechuga.",
+          "individualPrice": 19500,
+          "comboPrice": null
+        },
+        {
+          "name": "CARNE A LA PLANCHA",
+          "description": "180 g de lomo de res a la plancha. Acompañado de papa a la francesa, tomate y lechuga.",
+          "individualPrice": 23500,
+          "comboPrice": null
+        },
+        {
+          "name": "ALITAS",
+          "description": "8 piezas de alitas apanadas, acompañadas de papas a la francesa y patacón con queso. Salsa de miel mostaza o salsa BBQ.",
+          "individualPrice": 25000,
+          "comboPrice": null
+        },
+        {
+          "name": "SALCHIPAPA PORTAL",
+          "description": "150 g de papa a la francesa rizada, 90 g de carne desmechada, 90 g de pechuga de pollo, salchicha extralarga Colanta, salsas de la casa y queso mozzarella gratinado.",
+          "individualPrice": 24400,
+          "comboPrice": null
+        },
+        {
+          "name": "SALCHIPAPA SENCILLA",
+          "description": "140 g de papa a la francesa rizada y salchicha Colanta extralarga.",
+          "individualPrice": 12000,
+          "comboPrice": null
+        },
+        {
+          "name": "SALCHIPAPA CON QUESO",
+          "description": "140 g de papa a la francesa rizada, salchicha Colanta extralarga y queso mozzarella gratinado.",
+          "individualPrice": 13500,
+          "comboPrice": null
+        },
+        {
+          "name": "PORCIÓN DE PAPAS",
+          "description": "40 g de papa a la francesa rizada.",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "LA IMAGINACIÓN NO TIENE LÍMITE PARA TU SALCHIPAPA",
+          "description": "Papa a la francesa lisa o rizada y salchicha Colanta extralarga como base. Pide la lista de productos adicionales para tu salchipapa.",
+          "individualPrice": 12000,
+          "comboPrice": null
+        },
+        {
+          "name": "TROCIPOLLO",
+          "description": "8 trozos de pollo apanados, acompañados de 120 g de papas a la francesa.",
+          "individualPrice": 13000,
+          "comboPrice": null
+        }
+      ]
+    },
+    {
+      "name": "Bebidas",
+      "products": [
+        {
+          "name": "COCA COLA P 400",
+          "description": "",
+          "individualPrice": 4800,
+          "comboPrice": null
+        },
+        {
+          "name": "COCA COLA 1.5L",
+          "description": "",
+          "individualPrice": 9000,
+          "comboPrice": null
+        },
+        {
+          "name": "MILO FRÍO",
+          "description": "",
+          "individualPrice": 9000,
+          "comboPrice": null
+        },
+        {
+          "name": "JUGOS EN LECHE",
+          "description": "Guanábana, mango, maracuyá, mora o lulo.",
+          "individualPrice": 8000,
+          "comboPrice": null
+        },
+        {
+          "name": "JUGOS EN AGUA",
+          "description": "Guanábana, mango, maracuyá, mora o lulo.",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "CLUB COLOMBIA",
+          "description": "",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "ÁGUILA LIGHT",
+          "description": "",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "3 CORDILLERAS",
+          "description": "",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "CORONA",
+          "description": "",
+          "individualPrice": 9000,
+          "comboPrice": null
+        },
+        {
+          "name": "TAMARINDO",
+          "description": "",
+          "individualPrice": 4800,
+          "comboPrice": null
+        },
+        {
+          "name": "POSTOBÓN",
+          "description": "",
+          "individualPrice": 4800,
+          "comboPrice": null
+        },
+        {
+          "name": "POSTOBÓN 1.5 L",
+          "description": "",
+          "individualPrice": 8000,
+          "comboPrice": null
+        },
+        {
+          "name": "LIMONADA NATURAL",
+          "description": "",
+          "individualPrice": 6000,
+          "comboPrice": null
+        },
+        {
+          "name": "LIMONADA DE COCO",
+          "description": "",
+          "individualPrice": 10000,
+          "comboPrice": null
+        },
+        {
+          "name": "LIMONADA DE MANGO",
+          "description": "",
+          "individualPrice": 9000,
+          "comboPrice": null
+        },
+        {
+          "name": "LIMONADA HIERBABUENA",
+          "description": "",
+          "individualPrice": 9000,
+          "comboPrice": null
+        }
+      ]
+    }
+  ]
+}

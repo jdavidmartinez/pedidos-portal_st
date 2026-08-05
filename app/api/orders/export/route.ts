@@ -50,7 +50,7 @@ function buildCsv(orders: Awaited<ReturnType<typeof orderRepository.list>>["orde
       order.customer.address,
       order.observations,
       order.items
-        .map((item) => `${item.quantity}x ${item.name}`)
+        .map((item) => `${item.quantity}x ${item.name} (${item.variant === "combo" ? "Combo" : "Individual"})`)
         .join(" | "),
       order.subtotal,
       order.campaign?.name ?? null,

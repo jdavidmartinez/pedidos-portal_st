@@ -6,7 +6,7 @@ const product = {
   name: "PRODUCTO E2E PORTAL",
   description: "Producto ficticio para pruebas de navegador",
   individualPrice: 15000,
-  comboPrice: null,
+  comboPrice: 22000,
   imageUrl: "/images/Logo-Portal.png",
 };
 
@@ -52,13 +52,13 @@ test("muestra una campaña y completa el flujo del pedido sin escribir en Neon",
             address: "Calle E2E # 1-23",
             phone: "573001112233",
           },
-          items: [{ name: product.name, quantity: 1, unitPrice: 15000, lineTotal: 15000 }],
-          subtotal: 15000,
+          items: [{ name: product.name, variant: "combo", quantity: 1, unitPrice: 22000, lineTotal: 22000 }],
+          subtotal: 22000,
           discountPercent: 0,
           discountAmount: 0,
           campaign: null,
           deliveryFee: null,
-          total: 15000,
+          total: 22000,
           observations: "Prueba desde Playwright",
           status: "received",
           receivedAt: new Date().toISOString(),
@@ -79,7 +79,7 @@ test("muestra una campaña y completa el flujo del pedido sin escribir en Neon",
 
   const sections = page.getByRole("navigation", { name: "Secciones del menú" });
   await expect(sections.getByRole("button")).toHaveCount(2);
-  await page.getByRole("button", { name: `Agregar una unidad de ${product.name}` }).click();
+  await page.getByRole("button", { name: `Agregar un combo de ${product.name}` }).click();
   await expect(page.getByText("1 producto en tu pedido")).toBeVisible();
   await page.getByRole("button", { name: "Continuar con el pedido" }).click();
 
@@ -100,7 +100,7 @@ test("muestra una campaña y completa el flujo del pedido sin escribir en Neon",
       address: "Calle E2E # 1-23",
       phone: "3001112233",
     },
-    items: [{ name: product.name, quantity: 1 }],
+    items: [{ name: product.name, variant: "combo", quantity: 1 }],
     observations: "Prueba desde Playwright",
     dataConsent: true,
     dataConsentVersion: "v3",
@@ -136,10 +136,10 @@ test("permite navegar el menú con teclado y sin desbordamiento en móvil", asyn
   await page.keyboard.press("Escape");
   await expect(promotion).toBeHidden();
 
-  const addButton = page.getByRole("button", { name: `Agregar una unidad de ${product.name}` });
+  const addButton = page.getByRole("button", { name: `Agregar un individual de ${product.name}` });
   await addButton.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel(`1 unidades de ${product.name}`)).toBeVisible();
+  await expect(page.getByLabel(`1 unidades en presentación individual de ${product.name}`)).toBeVisible();
   await page.getByRole("button", { name: "Continuar con el pedido" }).click();
 
   const orderDialog = page.getByRole("dialog", { name: "Confirmar pedido" });

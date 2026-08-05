@@ -11,6 +11,12 @@ import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order, OrderStatus, UpdateOrderInput } from "@/types/order";
 import type { MenuProduct } from "@/lib/menu/menu-repository";
 
+const editItemKey = (name: string, variant: "individual" | "combo") => `${name}\u0000${variant}`;
+const splitEditItemKey = (key: string) => {
+  const [name, variant] = key.split("\u0000");
+  return { name, variant: variant === "combo" ? "combo" as const : "individual" as const };
+};
+
 const STATUS_LABELS: Record<OrderStatus, string> = {
   received: "Recibida",
   accepted: "Aceptada",
@@ -155,7 +161,7 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
   const [editObservations, setEditObservations] = useState(order.observations ?? "");
   const [editReason, setEditReason] = useState("");
   const [editItems, setEditItems] = useState<Record<string, number>>(() =>
-    Object.fromEntries(order.items.map((item) => [item.name, item.quantity]))
+    Object.fromEntries(order.items.map((item) => [editItemKey(item.name, item.variant), item.quantity]))
   );
   const [editError, setEditError] = useState("");
 
@@ -210,7 +216,7 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
   const saveOrderEdit = async () => {
     const items = Object.entries(editItems)
       .filter(([, quantity]) => quantity > 0)
-      .map(([name, quantity]) => ({ name, quantity }));
+      .map(([key, quantity]) => ({ ...splitEditItemKey(key), quantity }));
 
     if (items.length === 0) {
       setEditError("La orden debe conservar al menos un producto.");
@@ -349,11 +355,14 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
           <ul className="space-y-1.5">
             {order.items.map((item) => (
               <li
-                key={item.name}
+                key={`${item.name}-${item.variant}`}
                 className="flex items-start justify-between gap-3 text-xs text-white"
               >
                 <span>
                   <strong>{item.quantity}x</strong> {item.name}
+                  <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase ${item.variant === "combo" ? "bg-[#facc15] text-[#201E1E]" : "bg-white/10 text-white/60"}`}>
+                    {item.variant === "combo" ? "Combo" : "Individual"}
+                  </span>
                 </span>
                 <span className="shrink-0 text-white/60">
                   {formatCOP(item.lineTotal)}
@@ -502,12 +511,21 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
             <fieldset className="mt-5 border-t border-white/10 pt-4">
               <legend className="text-xs font-black uppercase tracking-wider text-white/60">Productos</legend>
               <div className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-1">
-                {menuProducts.map((product) => (
-                  <label key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs">
-                    <span>{product.name} <span className="text-white/40">{formatCOP(product.individualPrice)}</span></span>
-                    <input type="number" min="0" max="99" value={editItems[product.name] ?? 0} onChange={(event) => setEditItems({ ...editItems, [product.name]: Math.max(0, Number(event.target.value) || 0) })} className="w-16 rounded border border-white/20 bg-black/50 px-2 py-1 text-center text-white" />
-                  </label>
-                ))}
+                {menuProducts.flatMap((product) => {
+                  const options = [
+                    { variant: "individual" as const, label: "Individual", price: product.individualPrice },
+                    ...(product.comboPrice === null ? [] : [{ variant: "combo" as const, label: "Combo", price: product.comboPrice }]),
+                  ];
+                  return options.map((option) => {
+                    const key = editItemKey(product.name, option.variant);
+                    return (
+                      <label key={`${product.id}-${option.variant}`} className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs ${option.variant === "combo" ? "border-[#facc15]/40 bg-[#facc15]/5" : "border-white/10 bg-black/20"}`}>
+                        <span>{product.name} <strong className={option.variant === "combo" ? "text-[#facc15]" : "text-white/60"}>{option.label}</strong> <span className="text-white/40">{formatCOP(option.price)}</span></span>
+                        <input aria-label={`${product.name} ${option.label}`} type="number" min="0" max="99" value={editItems[key] ?? 0} onChange={(event) => setEditItems({ ...editItems, [key]: Math.max(0, Number(event.target.value) || 0) })} className="w-16 rounded border border-white/20 bg-black/50 px-2 py-1 text-center text-white" />
+                      </label>
+                    );
+                  });
+                })}
               </div>
             </fieldset>
 
