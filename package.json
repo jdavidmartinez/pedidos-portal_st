@@ -13,6 +13,7 @@
     "test:api": "node --env-file-if-exists=.env.test scripts/run-api-tests.mjs",
     "test:e2e": "node --env-file-if-exists=.env.test node_modules/@playwright/test/cli.js test",
     "db:migrate:test": "node --env-file-if-exists=.env.test scripts/migrate-test-db.mjs",
+    "db:verify-recovery": "node --env-file-if-exists=.env.recovery scripts/verify-recovery-db.mjs",
     "auth:create-user": "node --env-file-if-exists=.env.local scripts/create-auth-user.mjs"
   },
   "dependencies": {
