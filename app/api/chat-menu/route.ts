@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { menuRepository } from '@/lib/menu/menu-repository';
+import { buildGeminiMenuContext } from '@/lib/menu/gemini-menu-context';
 import { reportOperationalError } from '@/lib/observability/server';
 
 interface MenuMessage {
@@ -43,21 +44,17 @@ export async function POST(request: Request) {
     }
 
     const catalog = await menuRepository.listActive();
-    const contextoMenu = catalog
-      .flatMap((category) => category.products.map((product) => {
-        const combo = product.comboPrice === null
-          ? ''
-          : `, Combo $${product.comboPrice.toLocaleString('es-CO')} COP`;
-        return `- ${product.name}: Individual $${product.individualPrice.toLocaleString('es-CO')} COP${combo}.`;
-      }))
-      .join('\n');
+    const contextoMenu = buildGeminiMenuContext(catalog);
 
     const systemInstruction = `
     Eres el asistente virtual interno de la app web de 'Portal ST'. Tu objetivo es procesar el pedido que el usuario seleccionó en la interfaz.
-    Menú oficial actualizado desde el catálogo: ${contextoMenu}
+    Menú oficial actualizado desde el catálogo de la aplicación:
+    ${contextoMenu}
     
     Instrucciones:
     - Habla en español, de forma muy cordial, breve y profesional.
+    - Recomienda y cotiza únicamente productos y presentaciones incluidos en el menú oficial anterior.
+    - Usa siempre el precio individual o combo indicado en el menú oficial, según la presentación elegida.
     - El primer mensaje que recibirás será la lista de platos que el usuario escogió con los botones. Confírmale que los tienes anotados, calcula el valor total y pregúntale amablemente si desea agregar algo más o proceder con el envío a la cocina.
     `;
 

@@ -7,9 +7,11 @@ export const ORDER_STATUSES = [
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type OrderItemVariant = "individual" | "combo";
 
 export interface OrderItem {
   name: string;
+  variant: OrderItemVariant;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -54,6 +56,7 @@ export interface CreateOrderInput {
   items: Array<{
     name: string;
     quantity: number;
+    variant?: OrderItemVariant;
   }>;
   observations?: string;
   dataConsent: true;
@@ -67,6 +70,7 @@ export interface UpdateOrderInput {
   items?: Array<{
     name: string;
     quantity: number;
+    variant?: OrderItemVariant;
   }>;
   observations?: string | null;
   editReason?: string;

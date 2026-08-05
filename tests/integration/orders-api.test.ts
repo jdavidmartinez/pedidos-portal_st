@@ -6,6 +6,7 @@ import { authRepository } from "@/lib/auth/auth-repository";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order } from "@/types/order";
+import approvedMenu from "@/docs/menu-portal-st.json";
 
 const authState = vi.hoisted(() => ({ token: undefined as string | undefined }));
 
@@ -154,6 +155,26 @@ describe("orders API against Neon", () => {
     expect(body.order.customer.phone).toBe("573000000001");
     expect(body.order.status).toBe("received");
     expect(body.order.subtotal).toBeGreaterThan(0);
+    expect(body.order.items[0]?.variant).toBe("individual");
+  });
+
+  it("crea una presentación combo con el precio configurado por el servidor", async () => {
+    const [catalogProduct] = await sql`
+      SELECT combo_price FROM menu_products WHERE name = 'HAMBURGUESA PORTAL'
+    `;
+    const response = await postJson(
+      orderPayload({ items: [{ name: "HAMBURGUESA PORTAL", variant: "combo", quantity: 1 }] }),
+      `api-combo-${Date.now()}`
+    );
+    const body = (await response.json()) as { order: Order };
+
+    expect(response.status).toBe(201);
+    expect(body.order.items[0]).toMatchObject({
+      name: "HAMBURGUESA PORTAL",
+      variant: "combo",
+      unitPrice: Number(catalogProduct.combo_price),
+    });
+    expect(body.order.subtotal).toBe(Number(catalogProduct.combo_price));
   });
 
   it("returns the existing order for a repeated idempotency key", async () => {
@@ -169,7 +190,7 @@ describe("orders API against Neon", () => {
     expect(secondBody.order.id).toBe(firstBody.order.id);
   });
 
-  it("rechaza consentimiento, productos desconocidos y claves ausentes", async () => {
+  it("rechaza consentimiento, productos o combos desconocidos y claves ausentes", async () => {
     const withoutConsent = await postJson(
       orderPayload({ dataConsent: false }),
       `api-consent-${Date.now()}`
@@ -185,21 +206,57 @@ describe("orders API against Neon", () => {
         body: JSON.stringify(orderPayload()),
       })
     );
+    const unavailableCombo = await postJson(
+      orderPayload({ items: [{ name: "PECHUGA LA PLANCHA", variant: "combo", quantity: 1 }] }),
+      `api-unavailable-combo-${Date.now()}`
+    );
 
     expect(withoutConsent.status).toBe(400);
     expect(unknownProduct.status).toBe(400);
     expect(missingKey.status).toBe(400);
+    expect(unavailableCombo.status).toBe(400);
   });
 
   it("sirve el catálogo activo con imágenes WebP de Blob", async () => {
     const response = await getMenu();
     const body = (await response.json()) as {
-      categories: Array<{ products: Array<{ imageUrl: string }> }>;
+      categories: Array<{
+        name: string;
+        products: Array<{
+          name: string;
+          description: string;
+          individualPrice: number;
+          comboPrice: number | null;
+          imageUrl: string;
+        }>;
+      }>;
     };
     const products = body.categories.flatMap((category) => category.products);
 
     expect(response.status).toBe(200);
-    expect(products.length).toBeGreaterThan(0);
+    expect(body.categories).toHaveLength(3);
+    expect(products).toHaveLength(43);
+    expect(body.categories.map((category) => ({
+      name: category.name,
+      products: category.products.map((product) => ({
+        name: product.name,
+        description: product.description,
+        individualPrice: product.individualPrice,
+        comboPrice: product.comboPrice,
+      })),
+    }))).toEqual(approvedMenu.sections);
+    expect(products.find((product) => product.name === "HAMBURGUESA DEL BARRIO")).toMatchObject({
+      individualPrice: 16500,
+      comboPrice: 26300,
+    });
+    expect(products.find((product) => product.name === "HAMBURGUESA ITALIANA")).toMatchObject({
+      individualPrice: 23500,
+      comboPrice: 33300,
+    });
+    expect(products.find((product) => product.name === "TROCIPOLLO")).toMatchObject({
+      individualPrice: 13000,
+      comboPrice: null,
+    });
     expect(products.every((product) =>
       product.imageUrl.startsWith("https://zdflakunbsel3qht.public.blob.vercel-storage.com/menu-products/")
       && product.imageUrl.endsWith("-comic.webp")

@@ -11,6 +11,7 @@ const customerSchema = z.object({
 const orderItemSchema = z.object({
   name: z.string().trim().min(1).max(120),
   quantity: z.number().int().min(1).max(99),
+  variant: z.enum(["individual", "combo"]).default("individual"),
 });
 
 export const createOrderSchema = z.object({

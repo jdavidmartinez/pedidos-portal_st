@@ -34,8 +34,9 @@ No se deben ejecutar migraciones destructivas ni usar datos reales para probar.
 El runner es Vitest y se ejecuta con `npm run test:unit`. La primera batería
 cubre funciones puras:
 
-- `lib/orders/order-schema.ts`: datos válidos, campos obligatorios, consentimiento,
-  observaciones de máximo 500 caracteres y estados permitidos.
+- `lib/orders/order-schema.ts`: datos válidos, campos obligatorios,
+  presentación individual o combo, consentimiento, observaciones de máximo 500
+  caracteres y estados permitidos.
 - `lib/orders/date-range.ts`: fechas válidas, fechas imposibles y rango correcto
   de `America/Bogota`.
 - `lib/orders/whatsapp-link.ts`: mensaje con y sin domicilio, observaciones,
@@ -92,6 +93,11 @@ no realiza ninguna conexión ni escritura.
     y conserva solo una nueva sesión para el dispositivo actual.
 15. El restablecimiento administrativo rechaza usuarios `kitchen`, actualiza el
     hash y revoca todas las sesiones del usuario afectado.
+16. Una orden individual conserva el comportamiento anterior; una orden combo
+    usa el precio combo canónico del catálogo y se rechaza cuando el producto no
+    ofrece esa presentación.
+17. `GET /api/menu` devuelve las 3 secciones y los 43 productos del catálogo
+    aprobado, incluidos los precios individual y combo actualizados.
 
 ### 4. Pruebas E2E del flujo de cliente
 
@@ -111,8 +117,10 @@ imágenes para no crear órdenes reales ni archivos en Blob.
 
 En un navegador de prueba:
 
-1. Abrir `/menu` y comprobar categorías, imágenes y precios.
-2. Agregar, aumentar y disminuir productos.
+1. Abrir `/menu` y comprobar categorías, imágenes, precio individual y precio
+   combo cuando esté disponible.
+2. Agregar, aumentar y disminuir por separado las presentaciones individual y
+   combo de un producto.
 3. Confirmar que el carrito permanece visible durante el scroll.
 4. Abrir el resumen, completar nombre, dirección, teléfono y observaciones.
 5. Verificar que el formulario muestra el aviso de tratamiento de datos y que al
@@ -130,6 +138,8 @@ En un navegador de prueba:
 - `/admin/usuarios` permite restablecer una contraseña; las sesiones anteriores
   dejan de funcionar inmediatamente.
 - Se muestran únicamente las órdenes del día.
+- Las comandas y su formulario de edición distinguen las presentaciones
+  individual y combo y conservan sus precios canónicos.
 - Paginación y exportación por fecha funcionan.
 - Los estados cambian en orden: recibida, aceptada, en proceso,
   despachada/rechazada.
@@ -141,6 +151,8 @@ En un navegador de prueba:
   imagen; `/menu` refleja el cambio.
 - `/admin` permite crear una promoción eligiendo varios productos, porcentaje y fechas;
   `/menu` muestra el popup sin cambiar precios ni totales.
+- El contexto enviado a Gemini incluye secciones, descripciones y los precios
+  individual y combo obtenidos del mismo catálogo activo.
 
 ## Smoke test de producción
 
