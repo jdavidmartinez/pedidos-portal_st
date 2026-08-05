@@ -194,7 +194,7 @@ Una versión puede pasar a producción cuando:
   de Neon.
 - [x] Permitir crear, activar, desactivar y cambiar roles de usuarios desde el
   panel administrativo.
-- [ ] Realizar una revisión de accesibilidad, navegación por teclado, contraste y
+- [x] Realizar una revisión de accesibilidad, navegación por teclado, contraste y
   experiencia móvil.
 
 ## Prioridades de implementación
@@ -211,7 +211,7 @@ Una versión puede pasar a producción cuando:
 | Media | Parcial | Añadir observabilidad y alertas de producción | 20% |
 | Media | Parcial | Definir copias, recuperación y rollback de Neon | 20% |
 | Media | Completado | Completar la administración de usuarios desde el panel | 100% |
-| Baja | Parcial | Revisar accesibilidad y experiencia móvil | 30% |
+| Baja | Completado | Revisar accesibilidad y experiencia móvil | 100% |
 
 Los porcentajes describen el avance funcional estimado y deben actualizarse al
 cerrar cada bloque. El orden recomendado es completar primero la cobertura de
