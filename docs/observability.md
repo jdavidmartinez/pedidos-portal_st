@@ -35,6 +35,10 @@ tokens, cadenas de conexión ni mensajes internos de las excepciones.
 
 ## Activar alertas por webhook
 
+> Estado pendiente: el código está desplegado, pero las notificaciones externas
+> no quedarán activas hasta configurar y probar `OBSERVABILITY_WEBHOOK_URL` en
+> Vercel Production.
+
 1. Crea un webhook HTTPS en Slack, en el sistema de incidentes elegido o en un
    receptor propio.
 2. En Vercel abre el proyecto y entra a **Settings > Environment Variables**.

@@ -133,6 +133,12 @@ también `OBSERVABILITY_WEBHOOK_TOKEN`. Consulta la
 [guía de observabilidad](docs/observability.md) para activar las notificaciones,
 filtrar eventos y responder a incidentes.
 
+La recuperación de Neon se rige por una política de restauración instantánea,
+snapshots o copias lógicas, migraciones compensatorias y simulacros
+trimestrales. Consulta la
+[política de recuperación](docs/neon-recovery-policy.md) antes de ejecutar una
+migración o restaurar producción.
+
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
 El plan de verificación está en [docs/test-plan.md](docs/test-plan.md).
