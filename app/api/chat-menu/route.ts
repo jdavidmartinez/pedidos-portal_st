@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { menuRepository } from '@/lib/menu/menu-repository';
+import { reportOperationalError } from '@/lib/observability/server';
 
 interface MenuMessage {
   role: 'user' | 'bot';
@@ -36,7 +37,9 @@ export async function POST(request: Request) {
     const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     if (!GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Falta la API Key en las variables de entorno." }, { status: 500 });
+      const error = new Error("GeminiNotConfigured");
+      await reportOperationalError({ event: "gemini.configuration_failed", operation: "gemini.generate", dependency: "gemini", status: 503, error, route: "/api/chat-menu" });
+      return NextResponse.json({ error: "El asistente no está disponible temporalmente." }, { status: 503 });
     }
 
     const catalog = await menuRepository.listActive();
@@ -76,14 +79,19 @@ export async function POST(request: Request) {
       body: JSON.stringify({ contents })
     });
 
+    if (!response.ok) {
+      throw Object.assign(new Error("GeminiRequestFailed"), {
+        code: `HTTP_${response.status}`,
+      });
+    }
+
     const data = await response.json() as GeminiResponse;
     const respuestaIA = data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, experimenté un inconveniente al procesar la solicitud.";
 
     return NextResponse.json({ respuesta: respuestaIA });
 
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error desconocido.";
-    console.error("❌ Error en la ruta de la API:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    await reportOperationalError({ event: "gemini.request_failed", operation: "gemini.generate", dependency: "gemini", status: 500, error, route: "/api/chat-menu", requestId: request.headers.get("x-vercel-id") });
+    return NextResponse.json({ error: "No fue posible consultar el asistente." }, { status: 500 });
   }
 }

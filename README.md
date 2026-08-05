@@ -125,6 +125,14 @@ menos 16 caracteres. Vercel la enviará automáticamente como
 `Authorization: Bearer <CRON_SECRET>` en cada ejecución programada. El cron se
 registra al desplegar `vercel.json` y puede consultarse en `Settings > Cron Jobs`.
 
+Los errores operacionales se escriben como JSON en Vercel Runtime Logs sin
+datos personales. Los fallos de Neon, Blob, Gemini, creación de pedidos y los
+errores no capturados pueden notificarse a un webhook HTTPS configurando
+`OBSERVABILITY_WEBHOOK_URL`; si el receptor exige autorización, configura
+también `OBSERVABILITY_WEBHOOK_TOKEN`. Consulta la
+[guía de observabilidad](docs/observability.md) para activar las notificaciones,
+filtrar eventos y responder a incidentes.
+
 Consulta [el diseño del flujo de órdenes](docs/order-flow.md) para conocer el
 contrato, estados, privacidad, paginación y exportación histórica.
 El plan de verificación está en [docs/test-plan.md](docs/test-plan.md).

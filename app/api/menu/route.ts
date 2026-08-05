@@ -2,6 +2,7 @@ import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import { campaignRepository } from "@/lib/campaigns/campaign-repository";
 import { menuRepository } from "@/lib/menu/menu-repository";
 import { getTodayInColombia } from "@/lib/orders/date-range";
+import { reportOperationalError } from "@/lib/observability/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,13 +20,14 @@ export async function GET() {
     );
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) {
+      await reportOperationalError({ event: "neon.unavailable", operation: "menu.read", dependency: "neon", status: 503, error, route: "/api/menu" });
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
       );
     }
 
-    console.error("[menu] No fue posible consultar el catálogo:", error);
+    await reportOperationalError({ event: "menu.read_failed", operation: "menu.read", dependency: "neon", status: 500, error, route: "/api/menu" });
     return Response.json(
       { error: "No fue posible consultar el catálogo del menú." },
       { status: 500, headers: noStoreHeaders }

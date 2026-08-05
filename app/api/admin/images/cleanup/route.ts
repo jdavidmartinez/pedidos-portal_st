@@ -8,6 +8,7 @@ import {
   deleteEligibleOrphanedBlobs,
   getBlobCleanupReport,
 } from "@/lib/blob/blob-lifecycle";
+import { reportOperationalError } from "@/lib/observability/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,9 +31,10 @@ export async function GET() {
     return Response.json({ report: await getBlobCleanupReport() }, { headers: noStoreHeaders });
   } catch (error) {
     if (configurationError(error)) {
+      await reportOperationalError({ event: error instanceof DatabaseNotConfiguredError ? "neon.unavailable" : "auth.configuration_failed", operation: "blob.inventory", dependency: error instanceof DatabaseNotConfiguredError ? "neon" : "auth", status: 503, error, route: "/api/admin/images/cleanup" });
       return Response.json({ error: (error as Error).message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[blob-cleanup] No fue posible generar el inventario:", error);
+    await reportOperationalError({ event: "blob.inventory_failed", operation: "blob.inventory", dependency: "blob", status: 500, error, route: "/api/admin/images/cleanup" });
     return Response.json({ error: "No fue posible consultar las imágenes de Blob." }, { status: 500, headers: noStoreHeaders });
   }
 }
@@ -49,9 +51,10 @@ export async function DELETE(request: Request) {
     return Response.json(await deleteEligibleOrphanedBlobs(), { headers: noStoreHeaders });
   } catch (error) {
     if (configurationError(error)) {
+      await reportOperationalError({ event: error instanceof DatabaseNotConfiguredError ? "neon.unavailable" : "auth.configuration_failed", operation: "blob.cleanup", dependency: error instanceof DatabaseNotConfiguredError ? "neon" : "auth", status: 503, error, route: "/api/admin/images/cleanup" });
       return Response.json({ error: (error as Error).message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[blob-cleanup] No fue posible eliminar imágenes huérfanas:", error);
+    await reportOperationalError({ event: "blob.cleanup_failed", operation: "blob.cleanup", dependency: "blob", status: 500, error, route: "/api/admin/images/cleanup" });
     return Response.json({ error: "No fue posible completar la limpieza de Blob." }, { status: 500, headers: noStoreHeaders });
   }
 }
