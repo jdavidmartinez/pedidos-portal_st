@@ -9,6 +9,7 @@ import {
   safeMenuImageName,
   validateMenuImage,
 } from "@/lib/menu/menu-image-upload";
+import { reportOperationalError } from "@/lib/observability/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     }
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      await reportOperationalError({ event: "blob.configuration_failed", operation: "blob.upload", dependency: "blob", status: 503, error: new Error("BlobNotConfigured"), route: "/api/admin/images" });
       return Response.json(
         { error: "Vercel Blob todavía no está configurado en este entorno." },
         { status: 503, headers: noStoreHeaders }
@@ -70,13 +72,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof KitchenAuthConfigError) {
+      await reportOperationalError({ event: "auth.configuration_failed", operation: "blob.upload", dependency: "auth", status: 503, error, route: "/api/admin/images" });
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
       );
     }
 
-    console.error("[admin-images] No fue posible subir la imagen:", error);
+    await reportOperationalError({ event: "blob.upload_failed", operation: "blob.upload", dependency: "blob", status: 500, error, route: "/api/admin/images", requestId: request.headers.get("x-vercel-id") });
     return Response.json(
       { error: "No fue posible subir la imagen a Vercel Blob." },
       { status: 500, headers: noStoreHeaders }

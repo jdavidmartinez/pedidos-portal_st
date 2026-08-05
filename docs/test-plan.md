@@ -188,7 +188,7 @@ Una versión puede pasar a producción cuando:
   de testing y de producción, y documentar las variables de cada ambiente.
 - [x] Programar la limpieza periódica de Blob y añadir pruebas automatizadas
   para ese proceso.
-- [ ] Configurar observabilidad y alertas para errores `5xx`, fallos de Neon,
+- [x] Configurar observabilidad y alertas para errores `5xx`, fallos de Neon,
   errores de Blob y fallos en la creación de pedidos.
 - [ ] Documentar la política de copias, restauración y rollback de migraciones
   de Neon.
@@ -208,7 +208,7 @@ Una versión puede pasar a producción cuando:
 | Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
 | Alta | Completado | Completar las pruebas de autenticación y seguridad | 100% |
 | Media | Completado | Automatizar y probar la limpieza periódica de Blob | 100% |
-| Media | Parcial | Añadir observabilidad y alertas de producción | 20% |
+| Media | Completado | Añadir observabilidad y alertas de producción | 100% |
 | Media | Parcial | Definir copias, recuperación y rollback de Neon | 20% |
 | Media | Completado | Completar la administración de usuarios desde el panel | 100% |
 | Baja | Completado | Revisar accesibilidad y experiencia móvil | 100% |

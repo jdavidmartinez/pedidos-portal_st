@@ -15,6 +15,7 @@ import {
   getKitchenSession,
   KitchenAuthConfigError,
 } from "@/lib/auth/kitchen-auth";
+import { recordOperationalEvent, reportOperationalError } from "@/lib/observability/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     if (error instanceof KitchenAuthConfigError) {
+      await reportOperationalError({ event: "auth.configuration_failed", operation: "orders.list", dependency: "auth", status: 503, error, route: "/api/orders" });
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
@@ -75,6 +77,7 @@ export async function GET(request: Request) {
     }
 
     if (error instanceof DatabaseNotConfiguredError) {
+      await reportOperationalError({ event: "neon.unavailable", operation: "orders.list", dependency: "neon", status: 503, error, route: "/api/orders" });
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
       );
     }
 
-    console.error("[orders] No fue posible consultar las órdenes:", error);
+    await reportOperationalError({ event: "orders.list_failed", operation: "orders.list", dependency: "neon", status: 500, error, route: "/api/orders" });
     return Response.json(
       { error: "No fue posible consultar las órdenes." },
       { status: 500, headers: noStoreHeaders }
@@ -97,6 +100,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   try {
     const idempotencyKey = request.headers.get("Idempotency-Key")?.trim();
     if (!idempotencyKey || idempotencyKey.length > 160) {
@@ -108,6 +112,7 @@ export async function POST(request: Request) {
 
     const payload = createOrderSchema.parse(await request.json());
     const result = await orderRepository.create(payload, idempotencyKey);
+    recordOperationalEvent({ event: "orders.create_succeeded", operation: "orders.create", dependency: "neon", durationMs: Date.now() - startedAt, result: result.created ? "created" : "duplicate" });
     return Response.json(
       { order: result.order, duplicate: !result.created },
       { status: result.created ? 201 : 200, headers: noStoreHeaders }
@@ -131,6 +136,7 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof DatabaseNotConfiguredError) {
+      await reportOperationalError({ event: "neon.unavailable", operation: "orders.create", dependency: "neon", status: 503, error, route: "/api/orders", requestId: request.headers.get("x-vercel-id") });
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
@@ -144,7 +150,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("[orders] No fue posible crear la orden:", error);
+    await reportOperationalError({ event: "orders.create_failed", operation: "orders.create", dependency: "neon", status: 500, error, route: "/api/orders", requestId: request.headers.get("x-vercel-id") });
     return Response.json(
       { error: error instanceof Error ? error.message : "No fue posible crear la orden." },
       { status: 500, headers: noStoreHeaders }
