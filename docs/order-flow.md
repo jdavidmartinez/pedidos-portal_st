@@ -123,6 +123,12 @@ defecto y la exportación conserva las órdenes históricas en la base de datos.
 El consolidado permite elegir una fecha inicial y una fecha final; ambas están
 incluidas en el archivo CSV.
 
+Las órdenes de días anteriores que continúen en estado recibida, aceptada o en
+proceso se muestran en una bandeja destacada de **Pendientes de días
+anteriores**. Su contador continúa desde la hora original de recepción y la
+orden permanece operable hasta que cocina la despache o rechace. La paginación
+de las órdenes del día no oculta ni contabiliza esta bandeja.
+
 ## Tratamiento de datos personales
 
 Al continuar con el pedido, el cliente acepta el aviso disponible en

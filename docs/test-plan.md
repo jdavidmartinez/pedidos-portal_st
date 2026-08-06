@@ -98,6 +98,9 @@ no realiza ninguna conexión ni escritura.
     ofrece esa presentación.
 17. `GET /api/menu` devuelve las 3 secciones y los 43 productos del catálogo
     aprobado, incluidos los precios individual y combo actualizados.
+18. `GET /api/orders` entrega separadamente las órdenes del día y cualquier
+    orden pendiente de días anteriores, sin incluir órdenes históricas ya
+    despachadas o rechazadas.
 
 ### 4. Pruebas E2E del flujo de cliente
 

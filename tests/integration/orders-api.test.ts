@@ -266,6 +266,23 @@ describe("orders API against Neon", () => {
   it("protege, pagina y actualiza órdenes desde cocina", async () => {
     const created = await postJson(orderPayload(), `api-kitchen-${Date.now()}`);
     const createdBody = (await created.json()) as { order: Order };
+    const previousPending = await postJson(
+      orderPayload({
+        customer: {
+          name: `${testCustomerPrefix} pendiente anterior`,
+          address: "Calle anterior # 1-23",
+          phone: testPhone,
+        },
+      }),
+      `api-previous-pending-${Date.now()}`
+    );
+    const previousPendingBody = (await previousPending.json()) as { order: Order };
+    await sql`
+      UPDATE orders
+      SET received_at = ${"2020-01-01T15:00:00.000Z"},
+        updated_at = ${"2020-01-01T15:00:00.000Z"}
+      WHERE id = ${previousPendingBody.order.id}
+    `;
     const unauthorized = await getOrders(
       new Request(`http://test.local/api/orders?date=${getTodayInColombia()}`)
     );
@@ -336,6 +353,7 @@ describe("orders API against Neon", () => {
     );
     const listBody = (await listResponse.json()) as {
       orders: Order[];
+      pendingPreviousOrders: Order[];
       pagination: { pageSize: number; total: number };
     };
     const patchResponse = await patchOrder(
@@ -354,6 +372,14 @@ describe("orders API against Neon", () => {
     expect(listResponse.status).toBe(200);
     expect(listBody.pagination.pageSize).toBe(1);
     expect(listBody.pagination.total).toBeGreaterThan(0);
+    expect(listBody.pendingPreviousOrders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: previousPendingBody.order.id,
+          status: "received",
+        }),
+      ])
+    );
     expect(patchResponse.status).toBe(200);
     expect(patchBody.order.status).toBe("preparing");
 

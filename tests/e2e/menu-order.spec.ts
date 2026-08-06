@@ -79,6 +79,7 @@ test("muestra una campaña y completa el flujo del pedido sin escribir en Neon",
 
   const sections = page.getByRole("navigation", { name: "Secciones del menú" });
   await expect(sections.getByRole("button")).toHaveCount(2);
+  await expect(page.getByRole("img", { name: "Incluye papas fritas y gaseosa" }).first()).toBeVisible();
   await page.getByRole("button", { name: `Agregar un combo de ${product.name}` }).click();
   await expect(page.getByText("1 producto en tu pedido")).toBeVisible();
   await page.getByRole("button", { name: "Continuar con el pedido" }).click();
