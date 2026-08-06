@@ -1092,12 +1092,25 @@ function ProductOption({
           {featured && <span aria-hidden="true" className="text-[9px] text-[#facc15]">★</span>}
           <span className={`truncate text-[9px] font-black uppercase tracking-wider ${featured ? 'text-[#facc15]' : 'text-white/60'}`}>{label}</span>
         </div>
-        <p style={{ fontFamily, fontWeight: 700 }} className="whitespace-nowrap text-sm leading-tight text-white">{formatPrice(price)}</p>
+        <div className="flex items-center gap-1.5">
+          <p style={{ fontFamily, fontWeight: 700 }} className="whitespace-nowrap text-sm leading-tight text-white">{formatPrice(price)}</p>
+          {featured && (
+            <span
+              role="img"
+              aria-label="Incluye papas fritas y gaseosa"
+              title="Incluye papas fritas y gaseosa"
+              className="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-emerald-400/50 bg-emerald-950/70 px-1.5 py-0.5 text-sm leading-none shadow-inner"
+            >
+              <span aria-hidden="true">🍟</span>
+              <span aria-hidden="true">🥤</span>
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex shrink-0 items-center rounded-md border border-white/10 bg-black/45 p-0.5">
         <button type="button" aria-label={`Quitar un ${accessibleVariant} de ${productName}`} onClick={() => onChange(productName, variant, -1)} className="h-10 w-10 rounded text-base font-bold text-white transition-colors hover:bg-[#B03336]">−</button>
         <span aria-live="polite" aria-label={`${quantity} unidades en presentación ${accessibleVariant} de ${productName}`} style={{ fontFamily, fontWeight: 700 }} className="w-6 text-center text-sm text-white">{quantity}</span>
-        <button type="button" aria-label={`Agregar un ${accessibleVariant} de ${productName}`} onClick={() => onChange(productName, variant, 1)} className={`h-10 w-10 rounded text-base font-bold text-white transition-colors ${featured ? 'bg-[#B03336] hover:bg-[#c74346]' : 'hover:bg-[#B03336]'}`}>+</button>
+        <button type="button" aria-label={`Agregar un ${accessibleVariant} de ${productName}`} onClick={() => onChange(productName, variant, 1)} className="h-10 w-10 rounded bg-black/35 text-base font-bold text-white transition-colors hover:bg-[#B03336]">+</button>
       </div>
     </div>
   );

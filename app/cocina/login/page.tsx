@@ -1,11 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function KitchenLoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#0b0b0b]" />}>
+      <KitchenLoginForm />
+    </Suspense>
+  );
+}
+
+function KitchenLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAdminLogin = searchParams.get("next") === "/admin";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,9 +41,8 @@ export default function KitchenLoginPage() {
         throw new Error(payload.error || "No fue posible iniciar sesión.");
       }
 
-      const nextPath = new URLSearchParams(window.location.search).get("next");
       router.replace(
-        nextPath === "/admin" && payload.user?.role === "admin"
+        isAdminLogin && payload.user?.role === "admin"
           ? "/admin"
           : "/cocina"
       );
@@ -66,13 +75,15 @@ export default function KitchenLoginPage() {
               Portal ST
             </p>
             <h1 className="mt-1 text-2xl font-black uppercase">
-              Acceso a cocina
+              {isAdminLogin ? "Acceso a administración" : "Acceso a cocina"}
             </h1>
           </div>
         </div>
 
         <p className="mb-6 text-sm text-white/65">
-          Ingresa tus credenciales para administrar las órdenes.
+          {isAdminLogin
+            ? "Ingresa tus credenciales de administrador para gestionar el menú, las campañas y los usuarios."
+            : "Ingresa tus credenciales para administrar las órdenes."}
         </p>
 
         <form className="grid gap-4" onSubmit={handleSubmit}>

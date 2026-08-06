@@ -47,16 +47,20 @@ export async function GET(request: Request) {
     }
 
     const { from, to } = getColombiaDateRange(date);
-    const result = await orderRepository.list({
-      from,
-      to,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-    });
+    const [result, pendingPreviousOrders] = await Promise.all([
+      orderRepository.list({
+        from,
+        to,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      }),
+      orderRepository.listPendingBefore(from),
+    ]);
 
     return Response.json(
       {
         orders: result.orders,
+        pendingPreviousOrders,
         pagination: {
           date,
           page,

@@ -15,8 +15,11 @@ async function login(page: import("@playwright/test").Page, username: string, ne
 test("protege cocina y administración cuando no hay sesión", async ({ page }) => {
   await page.goto("/cocina");
   await expect(page).toHaveURL(/\/cocina\/login$/);
+  await expect(page.getByRole("heading", { name: "Acceso a cocina" })).toBeVisible();
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/cocina\/login\?next=\/admin$/);
+  await expect(page.getByRole("heading", { name: "Acceso a administración" })).toBeVisible();
+  await expect(page.getByText("gestionar el menú, las campañas y los usuarios")).toBeVisible();
 });
 
 test("permite operar cocina pero bloquea administración al rol kitchen", async ({ page }) => {

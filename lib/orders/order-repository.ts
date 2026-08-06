@@ -18,6 +18,7 @@ export interface OrderRepository {
     idempotencyKey: string
   ): Promise<{ order: Order; created: boolean }>;
   list(options: OrderListOptions): Promise<OrderListResult>;
+  listPendingBefore(before: Date): Promise<Order[]>;
   update(id: string, input: UpdateOrderInput): Promise<Order>;
 }
 
@@ -306,6 +307,50 @@ class PostgresOrderRepository implements OrderRepository {
       orders: (rows as unknown as OrderRow[]).map(toOrder),
       total: Number(countRows[0]?.total ?? 0),
     };
+  }
+
+  async listPendingBefore(before: Date) {
+    const sql = getSql();
+    const rows = await sql`
+      SELECT
+        o.id,
+        o.number,
+        o.customer_name,
+        o.customer_address,
+        o.customer_phone,
+        o.subtotal,
+        o.campaign_id,
+        o.campaign_name,
+        o.discount_percent,
+        o.discount_amount,
+        o.delivery_fee,
+        o.total,
+        o.observations,
+        o.status,
+        o.received_at,
+        o.updated_at,
+        o.completed_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'name', oi.name,
+              'variant', oi.variant,
+              'quantity', oi.quantity,
+              'unitPrice', oi.unit_price,
+              'lineTotal', oi.line_total
+            ) ORDER BY oi.item_index
+          ) FILTER (WHERE oi.order_id IS NOT NULL),
+          '[]'::json
+        ) AS items
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.received_at < ${before.toISOString()}
+        AND o.status IN ('received', 'accepted', 'preparing')
+      GROUP BY o.id
+      ORDER BY o.received_at ASC
+    `;
+
+    return (rows as unknown as OrderRow[]).map(toOrder);
   }
 
   async update(id: string, input: UpdateOrderInput) {

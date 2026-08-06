@@ -602,6 +602,7 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
 
 export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pendingPreviousOrders, setPendingPreviousOrders] = useState<Order[]>([]);
   const [menuProducts, setMenuProducts] = useState<MenuProduct[]>([]);
   const [authState, setAuthState] = useState<
     "checking" | "authenticated" | "unauthenticated"
@@ -669,6 +670,7 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
       });
       const payload = (await response.json()) as {
         orders?: Order[];
+        pendingPreviousOrders?: Order[];
         pagination?: OrdersPagination;
         error?: string;
       };
@@ -683,6 +685,7 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
       }
 
       setOrders(payload.orders);
+      setPendingPreviousOrders(payload.pendingPreviousOrders ?? []);
       setPage(payload.pagination?.page ?? requestedPage);
       setHasNextPage(payload.pagination?.hasNextPage ?? false);
       setTotalOrders(payload.pagination?.total ?? payload.orders.length);
@@ -756,6 +759,13 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
       setOrders((current) =>
         current.map((order) => (order.id === id ? payload.order! : order))
       );
+      setPendingPreviousOrders((current) => {
+        if (payload.order!.status === "dispatched" || payload.order!.status === "rejected") {
+          return current.filter((order) => order.id !== id);
+        }
+
+        return current.map((order) => (order.id === id ? payload.order! : order));
+      });
       setError("");
       return payload.order;
     } catch (updateError) {
@@ -867,6 +877,11 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
           <div className="flex items-end gap-4 text-right text-xs text-white/45">
             <div>
               <p>{totalOrders} órdenes del día</p>
+              {pendingPreviousOrders.length > 0 && (
+                <p className="mt-1 font-bold text-amber-300">
+                  {pendingPreviousOrders.length} pendientes anteriores
+                </p>
+              )}
               <p className="mt-1">
                 {lastUpdatedAt
                   ? `Actualizado ${lastUpdatedAt.toLocaleTimeString("es-CO")}`
@@ -918,34 +933,73 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
           >
             <p className="text-white/60">Consultando órdenes...</p>
           </section>
-        ) : orders.length === 0 ? (
-          <section
-            className="rounded-2xl border border-dashed px-6 py-20 text-center"
-            style={{
-              backgroundColor: "#171717",
-              borderColor: "#52525b",
-            }}
-          >
-            <p className="text-xl font-black uppercase text-white/70">
-              Aún no hay órdenes
-            </p>
-            <p className="mt-2 text-sm text-white/40">
-              Los pedidos confirmados desde /menu aparecerán aquí.
-            </p>
-          </section>
         ) : (
-          <section className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {orders.map((order) => (
-              <OrderCard
-                key={`${order.id}:${order.deliveryFee ?? "unset"}`}
-                order={order}
-                now={now}
-                updating={updatingIds.has(order.id)}
-                onUpdate={updateOrder}
-                menuProducts={menuProducts}
-              />
-            ))}
-          </section>
+          <>
+            {pendingPreviousOrders.length > 0 && (
+              <section
+                aria-labelledby="previous-pending-orders-title"
+                className="mb-6 rounded-2xl border-2 border-amber-400/70 bg-amber-400/[0.06] p-3 sm:p-4"
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300/70">
+                      Requieren atención
+                    </p>
+                    <h2 id="previous-pending-orders-title" className="text-lg font-black uppercase text-amber-200">
+                      Pendientes de días anteriores
+                    </h2>
+                  </div>
+                  <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1 text-xs font-black text-amber-200">
+                    {pendingPreviousOrders.length}
+                  </span>
+                </div>
+                <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {pendingPreviousOrders.map((order) => (
+                    <OrderCard
+                      key={`${order.id}:${order.deliveryFee ?? "unset"}`}
+                      order={order}
+                      now={now}
+                      updating={updatingIds.has(order.id)}
+                      onUpdate={updateOrder}
+                      menuProducts={menuProducts}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section aria-labelledby="today-orders-title">
+              <h2 id="today-orders-title" className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-white/60">
+                Órdenes de hoy
+              </h2>
+              {orders.length === 0 ? (
+                <div
+                  className="rounded-2xl border border-dashed px-6 py-16 text-center"
+                  style={{ backgroundColor: "#171717", borderColor: "#52525b" }}
+                >
+                  <p className="text-xl font-black uppercase text-white/70">
+                    Aún no hay órdenes de hoy
+                  </p>
+                  <p className="mt-2 text-sm text-white/40">
+                    Los pedidos confirmados desde /menu aparecerán aquí.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {orders.map((order) => (
+                    <OrderCard
+                      key={`${order.id}:${order.deliveryFee ?? "unset"}`}
+                      order={order}
+                      now={now}
+                      updating={updatingIds.has(order.id)}
+                      onUpdate={updateOrder}
+                      menuProducts={menuProducts}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
         )}
 
         {!loading && orders.length > 0 && (page > 1 || hasNextPage) && (
