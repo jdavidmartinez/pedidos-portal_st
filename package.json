@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate-db.mjs",
-    "dev": "next dev",
+    "db:migrate": "npm run db:migrate:dev",
+    "db:migrate:dev": "node --env-file-if-exists=.env.local scripts/migrate-development-db.mjs",
+    "dev": "node --env-file-if-exists=.env.local scripts/run-development.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
