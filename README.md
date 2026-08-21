@@ -5,10 +5,28 @@ terminal interna de cocina.
 
 ## Desarrollo
 
+El proyecto usa tres bases Neon aisladas. En `.env.local` configura solamente
+la conexión de la rama `development`:
+
+```dotenv
+DEV_DATABASE_URL=postgresql://...
+```
+
+`npm run dev` asigna esa conexión a `DATABASE_URL` dentro del proceso de
+Next.js. La conexión de producción permanece exclusivamente en las variables
+del ambiente Production de Vercel y la base de testing se configura mediante
+`TEST_DATABASE_URL` en `.env.test`.
+
 ```bash
 npm install
+npm run db:migrate:dev
 npm run dev
 ```
+
+`npm run db:migrate` es un alias seguro de `db:migrate:dev`. Ambos comandos
+exigen `DEV_DATABASE_URL`, se niegan a ejecutarse en Vercel Production y
+rechazan una conexión que coincida con testing, recuperación o una
+`PRODUCTION_DATABASE_URL` suministrada deliberadamente al proceso.
 
 Rutas principales:
 
@@ -91,8 +109,9 @@ pedidos; la consulta y actualización de órdenes requieren rol `kitchen` o
 ## Limitación del MVP
 
 Las órdenes y el catálogo del menú se guardan en PostgreSQL mediante
-`DATABASE_URL`. Las migraciones, incluida la carga inicial del catálogo, se
-ejecutan con `npm run db:migrate`. La migración
+`DATABASE_URL` en cada ambiente. En desarrollo, los comandos convierten
+`DEV_DATABASE_URL` internamente. Las migraciones locales, incluida la carga
+inicial del catálogo, se ejecutan con `npm run db:migrate:dev`. La migración
 `0006_marketing_consent.sql` permanece aplicada en Neon por compatibilidad.
 La migración `0007_menu_comic_images.sql` asignó las rutas históricas del
 catálogo y `0015_menu_blob_images.sql` las migró a imágenes WebP en Vercel

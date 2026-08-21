@@ -199,8 +199,9 @@ Una versión puede pasar a producción cuando:
   administración, autenticación, campañas y carga de imágenes.
 - [ ] Formalizar el smoke test de Preview y producción, registrando su resultado
   por despliegue.
-- [ ] Crear una base Neon exclusiva para desarrollo local, distinta de la base
-  de testing y de producción, y documentar las variables de cada ambiente.
+- [x] Crear una base Neon exclusiva para desarrollo local, distinta de la base
+  de testing y de producción, documentar las variables de cada ambiente y
+  proteger los comandos locales contra conexiones cruzadas.
 - [x] Programar la limpieza periódica de Blob y añadir pruebas automatizadas
   para ese proceso.
 - [ ] Completar la activación de alertas de producción para errores `5xx`,
@@ -222,7 +223,7 @@ Una versión puede pasar a producción cuando:
 | Crítica | Completado | Integrar las validaciones automáticas en CI | 100% |
 | Alta | Completado | Implementar pruebas E2E con Playwright | 100% |
 | Alta | Manual | Formalizar el smoke test de Preview y producción | 20% |
-| Alta | Parcial | Separar completamente desarrollo, testing y producción | 60% |
+| Alta | Completado | Separar completamente desarrollo, testing y producción | 100% |
 | Alta | Completado | Completar las pruebas de autenticación y seguridad | 100% |
 | Media | Completado | Automatizar y probar la limpieza periódica de Blob | 100% |
 | Media | Parcial | Añadir observabilidad y alertas de producción | 85% |
