@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     if (error instanceof DatabaseNotConfiguredError) {
       await reportOperationalError({ event: "neon.unavailable", operation: "orders.create", dependency: "neon", status: 503, error, route: "/api/orders", requestId: request.headers.get("x-vercel-id") });
       return Response.json(
-        { error: error.message },
+        { error: "No fue posible crear la orden. Inténtalo nuevamente." },
         { status: 503, headers: noStoreHeaders }
       );
     }
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
 
     await reportOperationalError({ event: "orders.create_failed", operation: "orders.create", dependency: "neon", status: 500, error, route: "/api/orders", requestId: request.headers.get("x-vercel-id") });
     return Response.json(
-      { error: error instanceof Error ? error.message : "No fue posible crear la orden." },
+      { error: "No fue posible crear la orden. Inténtalo nuevamente." },
       { status: 500, headers: noStoreHeaders }
     );
   }

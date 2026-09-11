@@ -1,5 +1,8 @@
 # Portal Pedidos
 
+Estado del proyecto y siguientes pasos: [auditoría y lista de tareas](docs/project-audit.md)
+(revisión del 10 de septiembre de 2026).
+
 MVP para construir pedidos desde el menú de Portal ST y entregarlos a una
 terminal interna de cocina.
 
@@ -174,6 +177,21 @@ npm run build
 Las pruebas de API contra Neon se ejecutan por separado con `npm run test:api`
 después de configurar `TEST_DATABASE_URL` en `.env.test` usando una base
 exclusiva para pruebas.
+
+Todos los puntos de entrada de pruebas validan la conexión antes de crear un
+cliente Neon. Rechazan URLs inválidas, Vercel Production y coincidencias con
+`DATABASE_URL`, `DEV_DATABASE_URL`, `PRODUCTION_DATABASE_URL` o
+`RECOVERY_DATABASE_URL` disponibles en el proceso o archivos locales de ambiente.
+La comparación ignora usuario, contraseña y parámetros, normaliza el puerto
+5432 y reconoce conexiones Neon directas y pooled. No configures `DATABASE_URL`
+con la conexión de testing: los procesos de prueba la asignan después de validar.
+Playwright inicia siempre un servidor propio y falla si el puerto 3100 está ocupado.
+
+La validación no consulta Neon para identificar ramas: confirma en Neon que
+`TEST_DATABASE_URL` pertenece a una rama desechable. Solo puede comparar las
+conexiones protegidas disponibles; no descubre URLs de producción ausentes ni
+otros endpoints de una misma rama. No copies secretos de producción al equipo
+solo para ejecutar pruebas.
 
 Las pruebas de navegador requieren Chromium y la aplicación compilada:
 

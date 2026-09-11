@@ -1,3 +1,4 @@
+import { getTestDatabaseUrl } from "../../scripts/lib/test-database-environment.cjs";
 import { neon } from "@neondatabase/serverless";
 import { randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
@@ -16,12 +17,7 @@ async function hashPassword(password: string) {
 }
 
 export default async function globalSetup() {
-  const databaseUrl = process.env.TEST_DATABASE_URL?.trim();
-  if (!databaseUrl) {
-    throw new Error(
-      "TEST_DATABASE_URL debe apuntar a la base Neon exclusiva para ejecutar E2E."
-    );
-  }
+  const databaseUrl = getTestDatabaseUrl();
 
   const sql = neon(databaseUrl);
   const passwordHash = await hashPassword(E2E_PASSWORD);

@@ -1,3 +1,4 @@
+import { getTestDatabaseUrl } from "../../scripts/lib/test-database-environment.cjs";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { neon } from "@neondatabase/serverless";
 import { createHmac, randomUUID } from "node:crypto";
@@ -37,10 +38,8 @@ import { POST as login } from "@/app/api/auth/login/route";
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { PATCH as changePassword } from "@/app/api/auth/password/route";
 
-const databaseUrl = process.env.TEST_DATABASE_URL?.trim();
-if (!databaseUrl) {
-  throw new Error("TEST_DATABASE_URL debe estar configurada para ejecutar estas pruebas.");
-}
+const databaseUrl = getTestDatabaseUrl();
+process.env.DATABASE_URL = databaseUrl;
 
 const sql = neon(databaseUrl);
 const testCustomerPrefix = `API TEST ${Date.now()}`;

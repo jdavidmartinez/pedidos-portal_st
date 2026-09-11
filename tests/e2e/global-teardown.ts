@@ -1,3 +1,4 @@
+import { getTestDatabaseUrl } from "../../scripts/lib/test-database-environment.cjs";
 import { neon } from "@neondatabase/serverless";
 import {
   E2E_ADMIN_USERNAME,
@@ -5,8 +6,7 @@ import {
 } from "./test-identity";
 
 export default async function globalTeardown() {
-  const databaseUrl = process.env.TEST_DATABASE_URL?.trim();
-  if (!databaseUrl) return;
+  const databaseUrl = getTestDatabaseUrl();
 
   const sql = neon(databaseUrl);
   await sql`

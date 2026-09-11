@@ -66,9 +66,14 @@ Después ejecuta:
 npm run test:api
 ```
 
-El comando aplica las migraciones a `TEST_DATABASE_URL`, verifica que no sea la
-misma URL de producción y ejecuta las pruebas de API. Sin `TEST_DATABASE_URL`
-no realiza ninguna conexión ni escritura.
+El comando valida `TEST_DATABASE_URL` antes de aplicar migraciones o conectar.
+La guarda compartida compara identidades de base (servidor, puerto y nombre)
+con todas las conexiones protegidas conocidas, incluso con distintos usuarios,
+contraseñas, parámetros y endpoints Neon directos/pooled. También se aplica a
+Vitest directo, migraciones de testing, configuración de Playwright y sus hooks.
+Sin una URL válida, o con una coincidencia protegida, no realiza conexiones.
+Consulta las limitaciones de identificación de ramas en el README y confirma
+el destino desechable en Neon antes de ejecutar las suites con escrituras.
 
 1. `POST /api/orders` crea una orden y recalcula precios desde `menu_products`.
 2. Una segunda petición con el mismo `Idempotency-Key` devuelve la misma orden y
@@ -113,7 +118,8 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright inicia la aplicación compilada en `127.0.0.1:3100`. El setup crea
+Playwright inicia siempre una aplicación compilada propia en `127.0.0.1:3100`;
+no reutiliza servidores existentes, cuya base no puede verificar. El setup crea
 usuarios temporales `admin` y `kitchen` únicamente en Neon Testing y el teardown
 los elimina. El flujo público intercepta las APIs de menú, pedidos y carga de
 imágenes para no crear órdenes reales ni archivos en Blob.
@@ -216,6 +222,11 @@ Una versión puede pasar a producción cuando:
   experiencia móvil.
 
 ## Prioridades de implementación
+
+> Tabla histórica de estimaciones, no certificación de producción. La auditoría
+> del 10 de septiembre de 2026 encontró cobertura E2E parcial y verificaciones
+> operativas pendientes. Consultar la [lista vigente de tareas y evidencias](project-audit.md)
+> para el estado actual y el orden de trabajo; sus estados sustituyen estos porcentajes.
 
 | Prioridad | Estado | Trabajo | Avance estimado |
 | --- | --- | --- | ---: |

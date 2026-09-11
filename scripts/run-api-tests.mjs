@@ -1,28 +1,11 @@
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { getTestDatabaseUrl } from "./lib/test-database-environment.cjs";
 
-async function readLocalDatabaseUrl() {
-  try {
-    const contents = await readFile(".env.local", "utf8");
-    const match = contents.match(/^DATABASE_URL=(.*)$/m);
-    return match?.[1]?.trim().replace(/^['\"]|['\"]$/g, "");
-  } catch {
-    return undefined;
-  }
-}
-
-const testDatabaseUrl = process.env.TEST_DATABASE_URL?.trim();
-const configuredDatabaseUrl =
-  process.env.DATABASE_URL?.trim() || (await readLocalDatabaseUrl());
-
-if (!testDatabaseUrl) {
-  console.error("[test:api] TEST_DATABASE_URL no está configurada.");
-  console.error("[test:api] Crea .env.test con una base Neon exclusiva para pruebas.");
-  process.exit(2);
-}
-
-if (configuredDatabaseUrl && configuredDatabaseUrl === testDatabaseUrl) {
-  console.error("[test:api] TEST_DATABASE_URL coincide con DATABASE_URL; se cancela por seguridad.");
+let testDatabaseUrl;
+try {
+  testDatabaseUrl = getTestDatabaseUrl();
+} catch (error) {
+  console.error(`[test:api] ${error.message}`);
   process.exit(2);
 }
 
@@ -49,7 +32,6 @@ const tests = spawn(npmCommand, ["exec", "vitest", "run", "--", "--config", "vit
   stdio: "inherit",
   env: {
     ...process.env,
-    DATABASE_URL: testDatabaseUrl,
     TEST_DATABASE_URL: testDatabaseUrl,
     AUTH_SECRET: process.env.AUTH_SECRET || "api-test-secret",
   },

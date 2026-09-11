@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { getTestDatabaseUrl } from "./scripts/lib/test-database-environment.cjs";
+
+const testDatabaseUrl = getTestDatabaseUrl();
 const port = 3100;
 const baseURL = `http://127.0.0.1:${port}`;
 
@@ -29,11 +32,11 @@ export default defineConfig({
   webServer: {
     command: `npm run start -- --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     env: {
       ...process.env,
-      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+      DATABASE_URL: testDatabaseUrl,
       AUTH_SECRET: process.env.AUTH_SECRET ?? "e2e-local-secret",
     },
   },

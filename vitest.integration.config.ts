@@ -1,5 +1,8 @@
+import { getTestDatabaseUrl } from "./scripts/lib/test-database-environment.cjs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+
+getTestDatabaseUrl();
 
 export default defineConfig({
   resolve: {
