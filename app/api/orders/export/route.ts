@@ -5,6 +5,7 @@ import {
   InvalidOrderDateRangeError,
 } from "@/lib/orders/date-range";
 import { orderRepository } from "@/lib/orders/order-repository";
+import { csvCell } from "@/lib/orders/csv-cell";
 import {
   getKitchenSession,
   KitchenAuthConfigError,
@@ -16,11 +17,6 @@ export const runtime = "nodejs";
 const noStoreHeaders = {
   "Cache-Control": "no-store",
 };
-
-function csvCell(value: string | number | null) {
-  const text = value === null ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
-}
 
 function buildCsv(orders: Awaited<ReturnType<typeof orderRepository.list>>["orders"]) {
   const rows = [

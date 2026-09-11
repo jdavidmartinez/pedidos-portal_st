@@ -45,6 +45,9 @@ cubre funciones puras:
 - `lib/menu/admin-menu-schema.ts`: precios, cantidades, imagen y categoría.
 - `lib/auth/password.ts`: hash `scrypt` con sal, contraseña correcta, contraseña
   incorrecta y formatos de hash inválidos.
+- `lib/orders/csv-cell.ts` y la ruta de exportación: prefijos de fórmula,
+  variantes Unicode, espacios y controles iniciales, comillas, separadores,
+  valores multilínea, importes numéricos, BOM UTF-8 y acceso autenticado.
 
 La persistencia de usuarios, sesiones, roles y límites de acceso se verifica en
 la capa de integración porque depende de PostgreSQL y de las cookies de Next.js.

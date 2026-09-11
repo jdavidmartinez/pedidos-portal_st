@@ -32,7 +32,7 @@ are not part of the documented MVP and are not assumed to be missing requirement
 | --- | --- |
 | `npm run lint` | Passed |
 | `npm run typecheck` | Passed |
-| `npm run test:unit` | Passed after A01 implementation: 87 tests in 16 files (5 new public-error regression cases) |
+| `npm run test:unit` | Passed after A03 implementation: 117 tests in 18 files (30 new CSV regression cases) |
 | Production build | `npm run build -- --webpack` passed with network access after A02. Default Turbopack remains unverified due to local process/port restrictions. |
 | API integration | Passed: 10 tests against configured Neon Testing after the final guard compatibility correction |
 | Playwright | Passed: 5 Chromium scenarios with a dedicated local server and Neon Testing |
@@ -73,9 +73,9 @@ completion criteria above or in their linked documents.
 | Core customer, kitchen and admin MVP | Implemented; existing API/E2E suites passed | Complete broader coverage and restaurant acceptance |
 | Local lint, types and unit verification | Verified locally: 3/3 checks passed | Preserve results in CI |
 | Production build | Verified with Webpack; default Turbopack pending | Confirm default build in CI |
-| A01 Public error handling | Implemented and verified locally | Deploy and monitor release checks |
-| A02 Test environment isolation | Implemented; unit, API and browser verification passed | Preserve safeguards and verified test-only configuration in CI |
-| A03 CSV literal-text protection | Open; quote escaping exists | Neutralize formula-like text and test |
+| A01 Public error handling | Deployed in `3e9c79d`; CI and read-only production smoke passed | Monitor operational errors |
+| A02 Test environment isolation | Deployed in `3e9c79d`; unit, API and browser verification passed | Preserve safeguards and verified test-only configuration in CI |
+| A03 CSV literal-text protection | Implemented and verified locally; not deployed | Include in next release; validate the restaurant's spreadsheet workflow |
 | A04 Public API resource limits | Open; login limits already exist separately | Set order/chat policies and implement |
 | A05 Migration reliability/runbook | Partial: migrations versioned | Correct procedure and verify failure recovery |
 | A06 Browser coverage | Partial: 5 scenarios implemented | Add missing critical operations and run |
@@ -151,3 +151,31 @@ branch in CI.
 A01 and A02 are ready for deployment based on the recorded local checks.
 Production release status must be verified against the published commit's
 GitHub CI and Vercel deployment checks.
+
+## A03 implementation update — 2026-09-10
+
+- [x] Centralize CSV cell encoding in `lib/orders/csv-cell.ts`. Prefix
+  formula-like strings with an apostrophe before double-quote escaping. Cover
+  ASCII/full-width formula prefixes and leading whitespace/control characters.
+- [x] Apply encoding to every export cell, including customer fields, phone
+  numbers and campaign names. Keep number values unchanged and null values empty;
+  retain UTF-8 BOM, quoted fields and CRLF row endings. Stored order data is not
+  modified.
+- [x] Add 30 regression cases in `tests/unit/csv-cell.test.ts` and
+  `tests/unit/order-export.test.ts`, exercising the real export handler with
+  session/repository boundaries mocked. Verify dangerous prefixes, quotes,
+  delimiters, multiline values, numeric amounts, response metadata and access.
+- [x] Lint, TypeScript, all 117 unit tests, Webpack production build and diff
+  whitespace checks passed. No database changes were needed. The previous
+  API/E2E results refer to release `3e9c79d`; those suites were not rerun for A03.
+
+The output uses the apostrophe/quoting mitigation described by
+[OWASP CSV Injection](https://owasp.org/www-community/attacks/CSV_Injection).
+CSV has no explicit cell types: spreadsheet programs may display the apostrophe,
+and saving/reopening a CSV can strip protective characters. Native Excel or
+LibreOffice import/save/reopen behavior was not tested here; the regression tests
+verify the exported bytes, not universal spreadsheet compatibility. Validate
+the restaurant's actual import workflow before relying on edited CSV copies.
+
+A03 is locally verified. Confirm deployment and cloud CI against the release
+commit before marking it deployed.
