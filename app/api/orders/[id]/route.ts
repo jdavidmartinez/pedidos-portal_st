@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -36,6 +37,9 @@ export async function PATCH(
     const order = await orderRepository.update(id, payload);
     return Response.json({ order }, { headers: noStoreHeaders });
   } catch (error) {
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "orders.update", "/api/orders/[id]", request);
+    }
     if (error instanceof KitchenAuthConfigError) {
       return Response.json(
         { error: error.message },
@@ -95,7 +99,7 @@ export async function PATCH(
       );
     }
 
-    console.error("[orders] No fue posible actualizar la orden:", error);
+    await reportRouteFailure(error, "orders.update", "/api/orders/[id]", request);
     return Response.json(
       { error: "No fue posible actualizar la orden." },
       { status: 500, headers: noStoreHeaders }

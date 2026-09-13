@@ -48,11 +48,20 @@ cubre funciones puras:
 - `lib/orders/csv-cell.ts` y la ruta de exportación: prefijos de fórmula,
   variantes Unicode, espacios y controles iniciales, comillas, separadores,
   valores multilínea, importes numéricos, BOM UTF-8 y acceso autenticado.
+- A04: límites de peticiones, identidad IP confiable, claves HMAC, cuerpos JSON
+  acotados, límites de mensaje/historial y timeout de Gemini, incluida una
+  respuesta cuyo cuerpo no termina. Ver [límites de APIs públicas](public-api-limits.md).
 
 La persistencia de usuarios, sesiones, roles y límites de acceso se verifica en
 la capa de integración porque depende de PostgreSQL y de las cookies de Next.js.
 
 ### 3. Pruebas de API e integración con Neon
+
+La cobertura A09 crea datos sintéticos vencidos, recientes y sujetos a una
+retención autorizada. Confirma la anonimización del pedido y de sus snapshots,
+la conservación de grupos con actividad reciente o una excepción activa y la
+repetición segura del proceso. La limpieza usa identificadores de pedido porque
+el proceso reemplaza el nombre y el teléfono.
 
 Usar una base de datos de testing separada de desarrollo y producción, y limpiar
 los datos de prueba por ejecución. La base Neon exclusiva ya fue creada y se
@@ -109,6 +118,9 @@ el destino desechable en Neon antes de ejecutar las suites con escrituras.
 18. `GET /api/orders` entrega separadamente las órdenes del día y cualquier
     orden pendiente de días anteriores, sin incluir órdenes históricas ya
     despachadas o rechazadas.
+19. La cuota pública compartida admite exactamente el límite bajo concurrencia,
+    conserva cuotas independientes por ruta, se reinicia al expirar y elimina
+    contadores antiguos. Cada ejecución usa una identidad de prueba independiente.
 
 ### 4. Pruebas E2E del flujo de cliente
 
@@ -165,6 +177,8 @@ En un navegador de prueba:
   `/menu` muestra el popup sin cambiar precios ni totales.
 - El contexto enviado a Gemini incluye secciones, descripciones y los precios
   individual y combo obtenidos del mismo catálogo activo.
+- Ante respuestas 429 o 504 del chat, aparece un mensaje legible y el cliente
+  puede seguir al formulario de entrega sin depender del asistente.
 
 ## Smoke test de producción
 

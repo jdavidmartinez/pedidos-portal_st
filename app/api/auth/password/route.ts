@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { NextResponse } from "next/server";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -52,6 +53,9 @@ export async function PATCH(request: Request) {
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "auth.password", "/api/auth/password", request);
+    }
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "La solicitud no contiene JSON válido." }, { status: 400, headers: noStoreHeaders });
     }
@@ -64,7 +68,7 @@ export async function PATCH(request: Request) {
     if (error instanceof DatabaseNotConfiguredError) {
       return NextResponse.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[auth] No fue posible cambiar la contraseña:", error);
+    await reportRouteFailure(error, "auth.password", "/api/auth/password", request);
     return NextResponse.json({ error: "No fue posible cambiar la contraseña." }, { status: 500, headers: noStoreHeaders });
   }
 }

@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   AuthUserNotFoundError,
@@ -45,6 +46,9 @@ export async function PATCH(
     );
     return Response.json({ user }, { headers: noStoreHeaders });
   } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.users.update", "/api/admin/users/[id]", request);
+    }
     if (error instanceof SyntaxError) {
       return Response.json({ error: "La solicitud no contiene JSON válido." }, { status: 400, headers: noStoreHeaders });
     }
@@ -57,7 +61,7 @@ export async function PATCH(
     if (error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[admin-users] No fue posible actualizar el usuario:", error);
+    await reportRouteFailure(error, "admin.users.update", "/api/admin/users/[id]", request);
     return Response.json({ error: "No fue posible actualizar el usuario." }, { status: 500, headers: noStoreHeaders });
   }
 }

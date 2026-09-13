@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   AuthUsernameConflictError,
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getKitchenSession();
     if (!session) {
@@ -23,9 +24,12 @@ export async function GET() {
     return Response.json({ users: await authRepository.listUsers() }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.users.list", "/api/admin/users", request);
+    }
+    if (error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[admin-users] No fue posible consultar los usuarios:", error);
+    await reportRouteFailure(error, "admin.users.list", "/api/admin/users", request);
     return Response.json({ error: "No fue posible consultar los usuarios." }, { status: 500, headers: noStoreHeaders });
   }
 }
@@ -70,6 +74,9 @@ export async function POST(request: Request) {
     );
     return Response.json({ user }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.users.create", "/api/admin/users", request);
+    }
     if (error instanceof SyntaxError) {
       return Response.json({ error: "La solicitud no contiene JSON válido." }, { status: 400, headers: noStoreHeaders });
     }
@@ -79,7 +86,7 @@ export async function POST(request: Request) {
     if (error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[admin-users] No fue posible crear el usuario:", error);
+    await reportRouteFailure(error, "admin.users.create", "/api/admin/users", request);
     return Response.json({ error: "No fue posible crear el usuario." }, { status: 500, headers: noStoreHeaders });
   }
 }

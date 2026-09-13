@@ -37,6 +37,12 @@ export interface OrderListResult {
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
 export class MissingDeliveryFeeError extends Error {}
+export class OrderEditPersistenceError extends Error {
+  constructor(cause: unknown) {
+    super("No fue posible guardar la corrección y su historial.", { cause });
+    this.name = "OrderEditPersistenceError";
+  }
+}
 export class InvalidOrderItemError extends Error {}
 export class InvalidCustomerPhoneError extends Error {}
 
@@ -403,14 +409,18 @@ class PostgresOrderRepository implements OrderRepository {
           : input.observations?.trim() || null;
       const nextItems = items ?? previousOrder.items;
       const updatedSnapshot = {
+        ...previousOrder,
         customer: {
-          ...customer,
+          name: customer.name.trim(),
+          address: customer.address.trim(),
           phone: normalizePhone(customer.phone),
         },
         items: nextItems,
         observations,
         subtotal,
         discountAmount,
+        total: subtotal - discountAmount + deliveryFee,
+        updatedAt: now,
       };
 
       const itemQueries = items
@@ -438,43 +448,41 @@ class PostgresOrderRepository implements OrderRepository {
           ]
         : [];
 
-      const results = await sql.transaction([
-        sql`
-          UPDATE orders
-          SET customer_name = ${customer.name.trim()},
-              customer_address = ${customer.address.trim()},
-              customer_phone = ${normalizePhone(customer.phone)},
-              observations = ${observations},
-              subtotal = ${subtotal},
-              discount_amount = ${discountAmount},
-              total = ${subtotal - discountAmount + deliveryFee},
-              updated_at = ${now}
-          WHERE id = ${id} AND status = 'received'
-          RETURNING id
-        `,
-        ...itemQueries,
-      ]);
+      let results;
+      try {
+        results = await sql.transaction([
+          sql`
+            UPDATE orders
+            SET customer_name = ${customer.name.trim()},
+                customer_address = ${customer.address.trim()},
+                customer_phone = ${normalizePhone(customer.phone)},
+                observations = ${observations},
+                subtotal = ${subtotal},
+                discount_amount = ${discountAmount},
+                total = ${subtotal - discountAmount + deliveryFee},
+                updated_at = ${now}
+            WHERE id = ${id} AND status = 'received'
+            RETURNING id
+          `,
+          ...itemQueries,
+          sql`
+            INSERT INTO order_edits (
+              order_id, reason, previous_order, updated_order, created_at
+            )
+            SELECT ${id}, ${input.editReason?.trim() || null},
+              ${JSON.stringify(previousOrder)}::jsonb,
+              ${JSON.stringify(updatedSnapshot)}::jsonb, ${now}
+            WHERE EXISTS (SELECT 1 FROM orders WHERE id = ${id} AND status = 'received')
+          `,
+        ]);
+      } catch (error) {
+        throw new OrderEditPersistenceError(error);
+      }
 
       if ((results[0] as unknown as Array<{ id: string }>).length === 0) {
         throw new InvalidOrderTransitionError(
           "La orden cambió mientras se editaba. Actualiza la pantalla e inténtalo de nuevo."
         );
-      }
-
-      try {
-        await sql`
-          INSERT INTO order_edits (
-            order_id, reason, previous_order, updated_order, created_at
-          ) VALUES (
-            ${id}, ${input.editReason?.trim() || null},
-            ${JSON.stringify(previousOrder)}::jsonb,
-            ${JSON.stringify(updatedSnapshot)}::jsonb, ${now}
-          )
-        `;
-      } catch (auditError) {
-        // La auditoría no debe impedir que cocina corrija la comanda si la
-        // migración todavía no se ha aplicado en este ambiente.
-        console.error("[orders] No fue posible auditar la corrección:", auditError);
       }
 
       return this.findById(id);

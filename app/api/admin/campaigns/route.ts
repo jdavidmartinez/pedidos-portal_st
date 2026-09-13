@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -16,7 +17,7 @@ export const runtime = "nodejs";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!hasRole(await getKitchenSession(), ["admin"])) {
       return Response.json(
@@ -31,10 +32,13 @@ export async function GET() {
     );
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.campaigns.list", "/api/admin/campaigns", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
 
-    console.error("[admin-campaigns] No fue posible consultar las campañas:", error);
+    await reportRouteFailure(error, "admin.campaigns.list", "/api/admin/campaigns", request);
     return Response.json(
       { error: "No fue posible consultar las campañas." },
       { status: 500, headers: noStoreHeaders },
@@ -56,6 +60,9 @@ export async function POST(request: Request) {
     return Response.json({ campaign }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.campaigns.create", "/api/admin/campaigns", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
     if (error instanceof ZodError) {
@@ -68,7 +75,7 @@ export async function POST(request: Request) {
       return Response.json({ error: error.message }, { status: 409, headers: noStoreHeaders });
     }
 
-    console.error("[admin-campaigns] No fue posible crear la campaña:", error);
+    await reportRouteFailure(error, "admin.campaigns.create", "/api/admin/campaigns", request);
     return Response.json(
       { error: "No fue posible crear la campaña." },
       { status: 500, headers: noStoreHeaders },

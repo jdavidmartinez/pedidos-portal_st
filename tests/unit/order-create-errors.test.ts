@@ -1,3 +1,4 @@
+vi.mock("@/lib/http/public-rate-limit", () => ({ consumePublicRateLimit: vi.fn().mockResolvedValue(undefined) }));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/orders/route";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";

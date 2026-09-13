@@ -1,3 +1,5 @@
+import { orderRepository, OrderEditPersistenceError } from "@/lib/orders/order-repository";
+import { publicRateKey } from "@/lib/http/public-rate-limit";
 import { getTestDatabaseUrl } from "../../scripts/lib/test-database-environment.cjs";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { neon } from "@neondatabase/serverless";
@@ -18,7 +20,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { GET as getMenu } from "@/app/api/menu/route";
-import { GET as getOrders, POST as postOrder } from "@/app/api/orders/route";
+import { GET as getOrders, POST as postOrderRoute } from "@/app/api/orders/route";
 import { PATCH as patchOrder } from "@/app/api/orders/[id]/route";
 import { GET as exportOrders } from "@/app/api/orders/export/route";
 import { GET as getAdminMenu, POST as postAdminMenu } from "@/app/api/admin/menu/route";
@@ -42,6 +44,14 @@ const databaseUrl = getTestDatabaseUrl();
 process.env.DATABASE_URL = databaseUrl;
 
 const sql = neon(databaseUrl);
+const rateRun = randomUUID().replaceAll("-", "");
+const testClientIp = `2001:db8:${rateRun.slice(0, 4)}:${rateRun.slice(4, 8)}::1`;
+let testRateKey = "";
+function postOrder(request: Request) {
+  const headers = new Headers(request.headers);
+  headers.set("x-vercel-forwarded-for", testClientIp);
+  return postOrderRoute(new Request(request, { headers }));
+}
 const testCustomerPrefix = `API TEST ${Date.now()}`;
 const testPhone = "3000000001";
 const testUsername = `api-kitchen-${Date.now()}`;
@@ -109,6 +119,8 @@ function jsonRequest(path: string, method: string, payload: unknown) {
 }
 
 beforeAll(async () => {
+  vi.stubEnv("VERCEL", "1");
+  testRateKey = publicRateKey("orders", new Request("http://test.local", { headers: { "x-vercel-forwarded-for": testClientIp } }));
   const kitchenId = randomUUID();
   const adminId = randomUUID();
   await sql`
@@ -127,6 +139,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await sql`DELETE FROM public_api_rate_limits WHERE bucket_key = ${testRateKey}`;
+  vi.unstubAllEnvs();
   authState.token = undefined;
   await sql`
     DELETE FROM campaigns WHERE name LIKE ${`${testCampaignPrefix}%`}
@@ -396,6 +410,39 @@ describe("orders API against Neon", () => {
     expect(lateEditPatch.status).toBe(409);
   });
 
+  it("commits correction history with the order and rolls back when audit storage rejects it", async () => {
+    const response = await postJson(orderPayload(), `api-audit-${Date.now()}`);
+    const { order: original } = await response.json() as { order: Order };
+    expect(response.status).toBe(201);
+    const changed = await orderRepository.update(original.id, {
+      customer: { ...original.customer, name: "  API TEST Audit customer  ", address: "  Calle audit # 10-20  " },
+      items: [{ name: "HAMBURGUESA PORTAL", quantity: 2 }],
+      observations: "Audit correction",
+    });
+    const history = await sql`SELECT previous_order, updated_order, reason FROM order_edits WHERE order_id = ${original.id}`;
+    expect(history).toHaveLength(1);
+    expect(history[0].reason).toBeNull();
+    expect(history[0].previous_order).toEqual(original);
+    expect(history[0].updated_order).toEqual(changed);
+
+    // Bypass input validation deliberately: the existing audit CHECK constraint
+    // fails after order and item writes, proving that the whole transaction rolls back.
+    await expect(orderRepository.update(original.id, {
+      customer: { ...changed.customer, address: "Calle must roll back # 99" },
+      items: [{ name: "HAMBURGUESA PORTAL", quantity: 3 }],
+      observations: "Must roll back", editReason: "x",
+    })).rejects.toBeInstanceOf(OrderEditPersistenceError);
+    const stored = await sql`SELECT customer_address, observations, subtotal, total, updated_at FROM orders WHERE id = ${original.id}`;
+    expect(stored[0].customer_address).toBe(changed.customer.address);
+    expect(stored[0].observations).toBe(changed.observations);
+    expect(Number(stored[0].subtotal)).toBe(changed.subtotal);
+    expect(Number(stored[0].total)).toBe(changed.total);
+    expect(new Date(stored[0].updated_at).toISOString()).toBe(changed.updatedAt);
+    const items = await sql`SELECT quantity FROM order_items WHERE order_id = ${original.id}`;
+    expect(Number(items[0].quantity)).toBe(2);
+    expect(await sql`SELECT id FROM order_edits WHERE order_id = ${original.id}`).toHaveLength(1);
+  });
+
   it("exporta el consolidado CSV del rango solicitado", async () => {
     const response = await exportOrders(
       new Request(
@@ -412,9 +459,9 @@ describe("orders API against Neon", () => {
 
   it("aplica roles y permite al administrador crear y editar productos", async () => {
     await setKitchenSession();
-    expect((await getAdminMenu()).status).toBe(403);
-    expect((await getCampaigns()).status).toBe(403);
-    expect((await getAdminUsers()).status).toBe(403);
+    expect((await getAdminMenu(new Request("http://test.local/api/admin/menu"))).status).toBe(403);
+    expect((await getCampaigns(new Request("http://test.local/api/admin/campaigns"))).status).toBe(403);
+    expect((await getAdminUsers(new Request("http://test.local/api/admin/users"))).status).toBe(403);
     expect((await postAdminUser(jsonRequest("/api/admin/users", "POST", {
       username: testManagedUsername,
       role: "kitchen",
@@ -423,7 +470,7 @@ describe("orders API against Neon", () => {
     }))).status).toBe(403);
 
     await setAdminSession();
-    const usersResponse = await getAdminUsers();
+    const usersResponse = await getAdminUsers(new Request("http://test.local/api/admin/users"));
     const usersBody = (await usersResponse.json()) as {
       users: Array<{ username: string; role: string }>;
     };
@@ -631,7 +678,7 @@ describe("orders API against Neon", () => {
 
     await setKitchenSession();
     const tokenBeforeLogout = authState.token as string;
-    expect((await logout()).status).toBe(200);
+    expect((await logout(new Request("http://test.local/api/auth/logout", { method: "POST" }))).status).toBe(200);
     expect(await authRepository.getSession(tokenBeforeLogout)).toBeNull();
 
     await setKitchenSession();

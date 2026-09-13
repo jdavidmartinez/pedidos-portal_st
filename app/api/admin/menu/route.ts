@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -22,7 +23,7 @@ function isUniqueViolation(error: unknown) {
     && (error as { code?: unknown }).code === "23505";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!(await requireKitchenSession())) {
       return Response.json(
@@ -37,13 +38,16 @@ export async function GET() {
     );
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.menu.list", "/api/admin/menu", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
       );
     }
 
-    console.error("[admin-menu] No fue posible consultar el catálogo:", error);
+    await reportRouteFailure(error, "admin.menu.list", "/api/admin/menu", request);
     return Response.json(
       { error: "No fue posible consultar el catálogo del menú." },
       { status: 500, headers: noStoreHeaders }
@@ -65,6 +69,9 @@ export async function POST(request: Request) {
     return Response.json({ product }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.menu.create", "/api/admin/menu", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
@@ -85,7 +92,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("[admin-menu] No fue posible crear el producto:", error);
+    await reportRouteFailure(error, "admin.menu.create", "/api/admin/menu", request);
     return Response.json(
       { error: "No fue posible crear el producto." },
       { status: 500, headers: noStoreHeaders }

@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import { AuthUserNotFoundError, authRepository } from "@/lib/auth/auth-repository";
 import { getPasswordPolicyError } from "@/lib/auth/password-policy";
@@ -35,6 +36,9 @@ export async function PATCH(
       { headers: noStoreHeaders }
     );
   } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.users.password", "/api/admin/users/[id]/password", request);
+    }
     if (error instanceof SyntaxError) {
       return Response.json({ error: "La solicitud no contiene JSON válido." }, { status: 400, headers: noStoreHeaders });
     }
@@ -44,7 +48,7 @@ export async function PATCH(
     if (error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
-    console.error("[admin-users] No fue posible restablecer la contraseña:", error);
+    await reportRouteFailure(error, "admin.users.password", "/api/admin/users/[id]/password", request);
     return Response.json({ error: "No fue posible restablecer la contraseña." }, { status: 500, headers: noStoreHeaders });
   }
 }

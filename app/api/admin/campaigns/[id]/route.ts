@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -35,6 +36,9 @@ export async function PATCH(
     return Response.json({ campaign }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.campaigns.update", "/api/admin/campaigns/[id]", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
     if (error instanceof ZodError) {
@@ -50,7 +54,7 @@ export async function PATCH(
       return Response.json({ error: error.message }, { status: 409, headers: noStoreHeaders });
     }
 
-    console.error("[admin-campaigns] No fue posible actualizar la campaña:", error);
+    await reportRouteFailure(error, "admin.campaigns.update", "/api/admin/campaigns/[id]", request);
     return Response.json(
       { error: "No fue posible actualizar la campaña." },
       { status: 500, headers: noStoreHeaders },
@@ -59,7 +63,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -75,13 +79,16 @@ export async function DELETE(
     return new Response(null, { status: 204, headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.campaigns.delete", "/api/admin/campaigns/[id]", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 503, headers: noStoreHeaders });
     }
     if (error instanceof CampaignNotFoundError) {
       return Response.json({ error: error.message }, { status: 404, headers: noStoreHeaders });
     }
 
-    console.error("[admin-campaigns] No fue posible borrar la campaña:", error);
+    await reportRouteFailure(error, "admin.campaigns.delete", "/api/admin/campaigns/[id]", request);
     return Response.json(
       { error: "No fue posible borrar la campaña." },
       { status: 500, headers: noStoreHeaders },

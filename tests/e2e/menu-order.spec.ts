@@ -155,3 +155,26 @@ test("permite navegar el menú con teclado y sin desbordamiento en móvil", asyn
   );
   expect(horizontalOverflow).toBe(false);
 });
+
+for (const status of [429, 504]) {
+  test(`permite continuar el pedido cuando Gemini responde ${status}`, async ({ page }) => {
+    await page.route("**/api/menu", route => route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ categories: [{ name: "Especiales", products: [product] }], campaign: null }),
+    }));
+    await page.route("**/api/chat-menu", route => route.fulfill({
+      status, contentType: "application/json",
+      body: JSON.stringify({ error: "Puedes continuar con tu pedido sin el asistente." }),
+    }));
+    await page.goto("/menu");
+    await page.getByRole("button", { name: `Agregar un combo de ${product.name}` }).click();
+    await page.getByRole("button", { name: /Hablar con Gemini/ }).click();
+    await expect(page.getByText("Puedes continuar con tu pedido sin el asistente.", { exact: true })).toBeVisible();
+    const confirm = page.getByRole("button", { name: /Confirmar Productos y Datos de Envío/ });
+    // The existing CTA bounces continuously; keyboard activation avoids animation timing.
+    await confirm.focus();
+    await confirm.press("Enter");
+    await expect(page.getByPlaceholder("Tu nombre")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enviar pedido", exact: true })).toBeEnabled();
+  });
+}

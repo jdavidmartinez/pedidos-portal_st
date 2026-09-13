@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -39,6 +40,9 @@ export async function PATCH(
     return Response.json({ product }, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "admin.menu.update", "/api/admin/menu/[id]", request);
+    }
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
       return Response.json(
         { error: error.message },
         { status: 503, headers: noStoreHeaders }
@@ -66,7 +70,7 @@ export async function PATCH(
       );
     }
 
-    console.error("[admin-menu] No fue posible actualizar el producto:", error);
+    await reportRouteFailure(error, "admin.menu.update", "/api/admin/menu/[id]", request);
     return Response.json(
       { error: "No fue posible actualizar el producto." },
       { status: 500, headers: noStoreHeaders }

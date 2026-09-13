@@ -16,7 +16,7 @@ const migrate = spawn(npmCommand, ["run", "db:migrate:test"], {
   env: {
     ...process.env,
     TEST_DATABASE_URL: testDatabaseUrl,
-    AUTH_SECRET: process.env.AUTH_SECRET || "api-test-secret",
+    AUTH_SECRET: process.env.AUTH_SECRET || "api-test-secret-for-public-api",
   },
 });
 
@@ -33,7 +33,7 @@ const tests = spawn(npmCommand, ["exec", "vitest", "run", "--", "--config", "vit
   env: {
     ...process.env,
     TEST_DATABASE_URL: testDatabaseUrl,
-    AUTH_SECRET: process.env.AUTH_SECRET || "api-test-secret",
+    AUTH_SECRET: process.env.AUTH_SECRET || "api-test-secret-for-public-api",
   },
 });
 

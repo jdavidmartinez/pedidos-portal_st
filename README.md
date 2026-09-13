@@ -1,5 +1,13 @@
 # Portal Pedidos
 
+Lista oficial de correcciones técnicas: [A01–A13 y siguiente tarea](docs/official-fix-list.md).
+
+Límites de las APIs públicas, timeout de Gemini y secuencia de migración A04:
+[guía operativa](docs/public-api-limits.md).
+
+Retención de datos de pedidos, excepciones y verificación del cron A09:
+[guía operativa](docs/order-data-retention.md).
+
 Estado del proyecto y siguientes pasos: [auditoría y lista de tareas](docs/project-audit.md)
 (revisión del 10 de septiembre de 2026).
 
@@ -141,6 +149,13 @@ detección y luego permite eliminarlos manualmente. Además, Vercel ejecuta
 diariamente `/api/cron/blob-cleanup` a las 10:00 UTC. El endpoint exige
 `CRON_SECRET` y aplica exactamente la misma política de retención. Las imágenes
 compartidas o todavía vinculadas nunca se marcan como eliminables.
+
+El mismo secreto protege `/api/cron/data-retention`, ejecutado cada lunes a las
+09:00 UTC. Este proceso anonimiza los datos personales 12 meses después del
+último pedido del cliente y conserva los datos no personales de ventas. Antes
+de desplegarlo, aplique la migración `0022_order_data_retention.sql`; consulte
+la [guía de retención](docs/order-data-retention.md) para excepciones, pruebas y
+recuperación de copias.
 
 Configura `CRON_SECRET` en Vercel para Production con una cadena aleatoria de al
 menos 16 caracteres. Vercel la enviará automáticamente como

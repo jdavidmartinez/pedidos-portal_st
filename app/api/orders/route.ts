@@ -1,3 +1,6 @@
+import { consumePublicRateLimit } from "@/lib/http/public-rate-limit";
+import { readBoundedJson } from "@/lib/http/bounded-json";
+import { RequestError, requestErrorResponse } from "@/lib/http/request-error";
 import { ZodError } from "zod";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -106,6 +109,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
+    await consumePublicRateLimit("orders", request);
     const idempotencyKey = request.headers.get("Idempotency-Key")?.trim();
     if (!idempotencyKey || idempotencyKey.length > 160) {
       return Response.json(
@@ -114,7 +118,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = createOrderSchema.parse(await request.json());
+    const payload = createOrderSchema.parse(await readBoundedJson(request));
     const result = await orderRepository.create(payload, idempotencyKey);
     recordOperationalEvent({ event: "orders.create_succeeded", operation: "orders.create", dependency: "neon", durationMs: Date.now() - startedAt, result: result.created ? "created" : "duplicate" });
     return Response.json(
@@ -122,6 +126,7 @@ export async function POST(request: Request) {
       { status: result.created ? 201 : 200, headers: noStoreHeaders }
     );
   } catch (error) {
+    if (error instanceof RequestError) return requestErrorResponse(error);
     if (error instanceof ZodError) {
       return Response.json(
         { error: "Los datos de la orden no son válidos.", issues: error.issues },

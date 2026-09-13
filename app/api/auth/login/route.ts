@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { NextResponse } from "next/server";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
@@ -42,6 +43,9 @@ export async function POST(request: Request) {
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch (error) {
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "auth.login", "/api/auth/login", request);
+    }
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: "La solicitud no contiene JSON válido." },
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
 
-    console.error("[auth] No fue posible iniciar sesión:", error);
+    await reportRouteFailure(error, "auth.login", "/api/auth/login", request);
     return NextResponse.json(
       { error: "No fue posible iniciar sesión." },
       { status: 500 }

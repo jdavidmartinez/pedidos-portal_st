@@ -1,3 +1,4 @@
+import { reportRouteFailure } from "@/lib/observability/route-failure";
 import { DatabaseNotConfiguredError } from "@/lib/db/neon";
 import {
   getColombiaDateRangeBetween,
@@ -101,6 +102,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof KitchenAuthConfigError || error instanceof DatabaseNotConfiguredError) {
+      await reportRouteFailure(error, "orders.export", "/api/orders/export", request);
+    }
     if (
       error instanceof KitchenAuthConfigError ||
       error instanceof DatabaseNotConfiguredError ||
@@ -120,7 +124,7 @@ export async function GET(request: Request) {
       );
     }
 
-    console.error("[orders-export] No fue posible generar el consolidado:", error);
+    await reportRouteFailure(error, "orders.export", "/api/orders/export", request);
     return Response.json(
       { error: "No fue posible generar el consolidado." },
       { status: 500, headers: noStoreHeaders }

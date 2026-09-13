@@ -2,6 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element -- El catálogo admite URLs configurables por el administrador. */
 
+import { requestMenuChat } from '@/lib/chat/chat-client';
+import { CHAT_MESSAGE_MAX_CHARS } from '@/lib/chat/chat-policy';
 import Image from 'next/image';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CategoriasMenu, Producto } from './data';
@@ -370,15 +372,8 @@ export default function LandingMenuPage() {
       setCargando(true);
 
       try {
-        const response = await fetch('/api/chat-menu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensajeUsuario: ordenInicial, historial: [] })
-        });
-        const data = await response.json();
-        setMensajes([...nuevosMensajes, { role: 'bot', text: data.respuesta }]);
-      } catch (err) {
-        console.error("Error communicating with AI:", err);
+        const reply = await requestMenuChat(ordenInicial, []);
+        setMensajes([...nuevosMensajes, { role: 'bot', text: reply }]);
       } finally {
         setCargando(false);
       }
@@ -398,15 +393,8 @@ export default function LandingMenuPage() {
     setCargando(true);
 
     try {
-      const response = await fetch('/api/chat-menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensajeUsuario: texto, historial: mensajes })
-      });
-      const data = await response.json();
-      setMensajes([...nuevosMensajes, { role: 'bot', text: data.respuesta }]);
-    } catch (err) {
-      console.error("Error processing message:", err);
+      const reply = await requestMenuChat(texto, mensajes);
+      setMensajes([...nuevosMensajes, { role: 'bot', text: reply }]);
     } finally {
       setCargando(false);
     }
@@ -1046,7 +1034,7 @@ export default function LandingMenuPage() {
             {!isConfirmedByAI && (
               <form onSubmit={manejarEnvioManual} className="p-3 border-t border-neutral-800 bg-neutral-950 flex gap-2">
                 <input 
-                  type="text" value={inputUsuario} 
+                  type="text" maxLength={CHAT_MESSAGE_MAX_CHARS} value={inputUsuario}
                   aria-label="Mensaje para Gemini"
                   onChange={(e) => setInputUsuario(e.target.value)}
                   placeholder="Escribe a Gemini..." 

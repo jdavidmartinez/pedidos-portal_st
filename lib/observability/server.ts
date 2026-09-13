@@ -10,7 +10,7 @@ export type OperationalDependency =
 interface OperationalErrorInput {
   event: string;
   operation: string;
-  status: 500 | 503;
+  status: 500 | 502 | 503 | 504;
   dependency: OperationalDependency;
   error: unknown;
   route?: string;
@@ -23,6 +23,7 @@ interface OperationalInfoInput {
   dependency?: OperationalDependency;
   durationMs?: number;
   result?: "created" | "duplicate" | "success";
+  counts?: Record<string, number>;
 }
 
 const ALERT_TIMEOUT_MS = 2_500;
@@ -36,12 +37,13 @@ function errorDetails(error: unknown) {
 
   const errorWithMetadata = error as Error & { code?: unknown; digest?: unknown };
   return {
-    errorName: error.name || "Error",
-    errorCode: typeof errorWithMetadata.code === "string"
-      ? errorWithMetadata.code.slice(0, 80)
+    errorName: /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.constructor.name)
+      ? error.constructor.name : "Error",
+    errorCode: typeof errorWithMetadata.code === "string" && /^(?:[0-9A-Z]{5}|E[A-Z_]{2,32}|HTTP_[1-5][0-9]{2})$/.test(errorWithMetadata.code)
+      ? errorWithMetadata.code
       : undefined,
-    errorDigest: typeof errorWithMetadata.digest === "string"
-      ? errorWithMetadata.digest.slice(0, 120)
+    errorDigest: typeof errorWithMetadata.digest === "string" && /^[0-9]{1,20}$/.test(errorWithMetadata.digest)
+      ? errorWithMetadata.digest
       : undefined,
   };
 }
@@ -106,7 +108,7 @@ async function sendAlert(event: Record<string, unknown>) {
     console.warn(JSON.stringify({
       level: "warn",
       event: "observability.webhook_failed",
-      errorName: alertError instanceof Error ? alertError.name : "UnknownError",
+      ...errorDetails(alertError),
     }));
   } finally {
     clearTimeout(timeout);
@@ -145,5 +147,6 @@ export function recordOperationalEvent(input: OperationalInfoInput) {
     dependency: input.dependency || "application",
     durationMs: input.durationMs,
     result: input.result,
+    counts: input.counts,
   }));
 }

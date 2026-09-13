@@ -1,5 +1,9 @@
 # Project audit and delivery tracker
 
+Current A01–A13 statuses are maintained in David's
+[official technical fix list](official-fix-list.md), designated on 2026-09-10.
+This audit retains the supporting findings and verification evidence.
+
 Audit date: 2026-09-10. Source baseline: `dddebeb` plus the current working tree.
 
 ## Assessment
@@ -32,10 +36,10 @@ are not part of the documented MVP and are not assumed to be missing requirement
 | --- | --- |
 | `npm run lint` | Passed |
 | `npm run typecheck` | Passed |
-| `npm run test:unit` | Passed after A03 implementation: 117 tests in 18 files (30 new CSV regression cases) |
-| Production build | `npm run build -- --webpack` passed with network access after A02. Default Turbopack remains unverified due to local process/port restrictions. |
-| API integration | Passed: 10 tests against configured Neon Testing after the final guard compatibility correction |
-| Playwright | Passed: 5 Chromium scenarios with a dedicated local server and Neon Testing |
+| `npm run test:unit` | Passed after A04 implementation: 158 tests in 22 files |
+| Production build | A04 Webpack build passed locally; default Turbopack passed cloud CI for A03 but was not run locally for A04 |
+| API integration | Passed: 12 tests against Neon Testing, including atomic concurrent quota enforcement |
+| Playwright | Passed: 7 Chromium scenarios with a dedicated local server and Neon Testing, including chat 429/504 fallback |
 | Production, Preview, CI history, provider settings | Not verified in this audit |
 
 ## Findings and completion criteria
@@ -54,8 +58,8 @@ P2 means finish as part of delivery hardening; P3 means later maintainability wo
 | A05 | P1 | `docs/neon-recovery-policy.md` instructs using `npm run db:migrate` for production, but that alias selects development and refuses Vercel Production. The underlying migration runner executes statements and records the version separately without an enclosing migration transaction. | Correct the runbook, document the exact guarded production procedure, and verify failure/retry behavior on a disposable database without leaving partially applied migrations. |
 | A06 | P2 | E2E completion was overstated. The five scenarios cover mocked customer checkout, mobile/keyboard basics, route access and a mocked upload. They do not operate kitchen transitions, export, password changes, product saves or campaign creation through the UI. | Add those critical browser scenarios, retain clear mock boundaries, and record a successful isolated run. |
 | A07 | P1 | Smoke-test steps exist but there is no per-deployment result record. Production alerts are explicitly pending in `docs/observability.md`. | Record commit, deployment URL, environment, tester, time, outcomes and defects; verify a controlled alert reaches the intended destination. |
-| A08 | P2 | Several caught failures bypass the structured helper, including order update/export. Order-edit audit insertion runs after the edit transaction and catches failures (`lib/orders/order-repository.ts`). | Route operational failures through sanitized structured reporting and define whether audit persistence is mandatory; test audit failure behavior explicitly. |
-| A09 | P2 | The customer notice promises retention up to 12 months after the last order, but no order/customer retention job or documented execution record was found. Order-edit snapshots also contain customer data. | Define and implement a retention workflow consistent with the existing notice, covering orders, audit snapshots and backup handling; verify with synthetic data. This is an implementation gap, not a legal assessment. |
+| A08 | P2 | Implemented locally: route failures use sanitized structured reporting, and editing an order and persisting its audit record are one transaction. An audit write failure rolls the edit back. | Deploy and verify sanitized events in Production Runtime Logs. |
+| A09 | P2 | Implemented locally: weekly anonymization applies 12 months after each customer's latest order, scrubs order-edit snapshots, supports authorized retention holds and records aggregate counts. | Apply migration `0022`, deploy, and retain evidence from the first successful production run. See [the retention runbook](order-data-retention.md). |
 | A10 | P2 | Backup and accessibility policies exist, but this checkout contains no measured recovery drill or current manual assistive-technology/device results. | Record restore verification and measured RPO/RTO; record keyboard, screen-reader, zoom and real-device acceptance results. |
 | A11 | P2 | No load-test suite or measured service targets found. Previous pending orders are unpaginated; export reads at most 50,000 orders without reporting truncation. | Define expected traffic and latency/error targets; test polling, order creation and export on synthetic data; bound pending results and make export limits explicit or complete. |
 | A12 | P2 | Status checks detect competing status changes, but edits while status remains `received` can overwrite another operator's edit; delivery-fee updates can similarly use stale values (`lib/orders/order-repository.ts`). | Add version/timestamp conflict detection or equivalent locking and concurrent integration tests; rejected stale edits must preserve the winning change. |
@@ -75,14 +79,14 @@ completion criteria above or in their linked documents.
 | Production build | Verified with Webpack; default Turbopack pending | Confirm default build in CI |
 | A01 Public error handling | Deployed in `3e9c79d`; CI and read-only production smoke passed | Monitor operational errors |
 | A02 Test environment isolation | Deployed in `3e9c79d`; unit, API and browser verification passed | Preserve safeguards and verified test-only configuration in CI |
-| A03 CSV literal-text protection | Implemented and verified locally; not deployed | Include in next release; validate the restaurant's spreadsheet workflow |
-| A04 Public API resource limits | Open; login limits already exist separately | Set order/chat policies and implement |
+| A03 CSV literal-text protection | Deployed in `ac50429`; cloud CI and read-only production checks passed | Validate the restaurant's spreadsheet workflow |
+| A04 Public API resource limits | Implemented; local unit/API/browser checks passed; `0021` applied in Production on 2026-09-13 | Publish the new routes and run production smoke checks |
 | A05 Migration reliability/runbook | Partial: migrations versioned | Correct procedure and verify failure recovery |
 | A06 Browser coverage | Partial: 5 scenarios implemented | Add missing critical operations and run |
 | A07 Deployment smoke evidence | Partial: procedure written | Create and complete a release record |
 | A07 Production notifications | Partial: webhook code exists | Configure and verify delivery |
-| A08 Operational/audit consistency | Partial: helper and edit history exist | Cover remaining errors and audit failures |
-| A09 Data retention execution | Partial: notice exists | Implement and validate lifecycle |
+| A08 Operational/audit consistency | Implemented and verified locally on 2026-09-13 | Deploy and verify sanitized events in Production Runtime Logs |
+| A09 Data retention execution | Implemented and verified; `0022` applied in Development, Testing and Production on 2026-09-13 | Deploy and verify the first scheduled run |
 | A10 Recovery readiness | Partial: policy and verifier exist | Record isolated recovery drill |
 | A10 Accessibility acceptance | Partial: fixes and basic automation exist | Record manual device/assistive checks |
 | A11 Performance/capacity | Open; no baseline found | Agree workload and targets, then measure |
@@ -90,13 +94,13 @@ completion criteria above or in their linked documents.
 | A13 UI decomposition | Open; optional after delivery gates | Extract components incrementally |
 | Restaurant acceptance/sign-off | Unverified | Confirm catalog, delivery rules, promotions and complete order lifecycle with the owner |
 
-Recommended sequence after A01/A02: A03/A04/A05; next A06/A08/A12;
+Recommended next step: release A04 following its migration sequence, then A05; next A06/A08/A12;
 then operational, retention, performance and accessibility evidence before final
 restaurant acceptance. Do not add payment or other new features without revisiting scope.
 
 For each future completion, update this table with date, commit and test or
 deployment evidence. The old percentage table in `test-plan.md` is historical;
-this tracker is the current delivery assessment.
+the official fix list is authoritative for current A01–A13 statuses.
 
 ## A02 implementation update — 2026-09-10
 
@@ -177,5 +181,39 @@ LibreOffice import/save/reopen behavior was not tested here; the regression test
 verify the exported bytes, not universal spreadsheet compatibility. Validate
 the restaurant's actual import workflow before relying on edited CSV copies.
 
-A03 is locally verified. Confirm deployment and cloud CI against the release
-commit before marking it deployed.
+## A03 production verification — 2026-09-11
+
+Commit `ac5042955c8245026ad6fb069e030cf72fb89128` is the current remote master.
+Its [Vercel deployment](https://vercel.com/jdavidmartinezs-projects/pedidos-portal-st/C8bqKBfxqzfCytxKvbAmigrvkd4k)
+completed successfully, and all three [GitHub CI jobs](https://github.com/jdavidmartinez/pedidos-portal_st/actions/runs/34551862163)
+passed, including API integration and Playwright. No additional deployment was needed.
+
+Read-only checks at 2026-09-11 12:40 UTC against
+https://pedidos-portal-st.vercel.app passed: `/menu` and `/api/menu` returned 200
+(3 categories, 43 products); `/cocina` and `/admin` redirected to login; orders
+and CSV export APIs returned 401 without a session. No production orders were
+created or modified. Native spreadsheet import/save/reopen testing remains outside
+these checks.
+
+## A04 implementation verification — 2026-09-11
+
+See [public API limits and release sequence](public-api-limits.md) for exact
+policies, response codes, trusted ingress assumptions and operating limitations.
+
+- [x] Shared Neon quotas: 20 order attempts per 600 seconds and 12 chat attempts
+  per 60 seconds. Atomic admission, hashed client buckets, per-route isolation,
+  bounded counters, expiry reset and activity-driven stale cleanup.
+- [x] Bound actual JSON bytes and upload duration; validate chat message/history
+  length, total characters and roles before catalog/Gemini work.
+- [x] Abort Gemini at 15 seconds including response-body reads, cap output,
+  and return safe errors. Browser errors remain readable and checkout is usable.
+- [x] Migrate Development and Testing with `0021_public_api_rate_limits.sql`.
+  Production was not migrated.
+- [x] Lint, TypeScript, 158 unit tests, 12 API/integration tests, 7 browser tests,
+  Webpack production build and `git diff --check` passed. The concurrent quota
+  test uses real Neon; Gemini failure/timeout checks use mocks and make no paid
+  Gemini requests. Browser recovery is tested with keyboard activation of the
+  existing animated confirmation button.
+- [ ] Apply migration 0021 to Production/Preview before deploying A04 and verify
+  that the existing AUTH_SECRET has at least 16 characters. This implementation
+  is not committed, pushed or deployed.
