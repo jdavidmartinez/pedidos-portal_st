@@ -77,8 +77,9 @@ and does not change existing order records.
 
 An old application version can run with the added table, so apply the migration
 before the deployment and leave it in place if rolling the application back.
-Migration `0021` was applied in Production on 2026-09-13. Deployment remains
-pending.
+Migration `0021` was applied and deployed in Production on 2026-09-13. Smoke
+tests confirmed a valid menu response, safe chat-limit rejection (`400`) and
+oversized-order rejection (`413`).
 
 ## Verification
 

@@ -80,13 +80,13 @@ completion criteria above or in their linked documents.
 | A01 Public error handling | Deployed in `3e9c79d`; CI and read-only production smoke passed | Monitor operational errors |
 | A02 Test environment isolation | Deployed in `3e9c79d`; unit, API and browser verification passed | Preserve safeguards and verified test-only configuration in CI |
 | A03 CSV literal-text protection | Deployed in `ac50429`; cloud CI and read-only production checks passed | Validate the restaurant's spreadsheet workflow |
-| A04 Public API resource limits | Implemented; local unit/API/browser checks passed; `0021` applied in Production on 2026-09-13 | Publish the new routes and run production smoke checks |
+| A04 Public API resource limits | Deployed and smoke-tested in Production on 2026-09-13; valid UI/menu requests returned 200, bounded chat returned 400 and oversized orders returned 413 | Monitor limits and tune them after the A11 performance baseline |
 | A05 Migration reliability/runbook | Partial: migrations versioned | Correct procedure and verify failure recovery |
 | A06 Browser coverage | Partial: 5 scenarios implemented | Add missing critical operations and run |
 | A07 Deployment smoke evidence | Partial: procedure written | Create and complete a release record |
 | A07 Production notifications | Partial: webhook code exists | Configure and verify delivery |
-| A08 Operational/audit consistency | Implemented and verified locally on 2026-09-13 | Deploy and verify sanitized events in Production Runtime Logs |
-| A09 Data retention execution | Implemented and verified; `0022` applied in Development, Testing and Production on 2026-09-13 | Deploy and verify the first scheduled run |
+| A08 Operational/audit consistency | Deployed; local rollback test and protected-route Production smoke test passed on 2026-09-13 | Verify a sanitized structured event during a controlled or real operational failure |
+| A09 Data retention execution | Deployed and verified; `0022` applied in Development, Testing and Production; manual Vercel cron run succeeded on 2026-09-13 with zero records eligible | Review the weekly scheduled run in Vercel Runtime Logs |
 | A10 Recovery readiness | Partial: policy and verifier exist | Record isolated recovery drill |
 | A10 Accessibility acceptance | Partial: fixes and basic automation exist | Record manual device/assistive checks |
 | A11 Performance/capacity | Open; no baseline found | Agree workload and targets, then measure |
