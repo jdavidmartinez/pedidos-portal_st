@@ -10,6 +10,10 @@ import type { CategoriasMenu, Producto } from './data';
 import type { Order } from '@/types/order';
 import { DATA_PROCESSING_POLICY_VERSION } from '@/lib/privacy/data-processing';
 
+const GEMINI_ASSISTANT_ENABLED = false;
+const RESTAURANT_WHATSAPP_NUMBER = "573213166885";
+const RESTAURANT_WHATSAPP_URL = `https://wa.me/${RESTAURANT_WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola, quiero comunicarme con el restaurante.")}`;
+
 interface Mensaje {
   role: 'user' | 'bot';
   text: string;
@@ -480,6 +484,17 @@ export default function LandingMenuPage() {
   return (
     /* Global user text selection matching brand red #B03336 */
     <div className="relative min-h-screen pb-12 selection:bg-[#B03336] selection:text-[#FEFEFE]">
+      <a
+        href={RESTAURANT_WHATSAPP_URL}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Hablar con el restaurante por WhatsApp"
+        className="fixed bottom-4 right-4 z-[70] inline-flex items-center gap-2 rounded-full border border-white/25 bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(37,211,102,0.45)] transition hover:scale-105 hover:bg-[#20bd5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#201E1E]"
+      >
+        <span aria-hidden="true" className="text-lg leading-none">◔</span>
+        <span>WhatsApp</span>
+        <span className="hidden text-xs font-medium sm:inline">321 316 6885</span>
+      </a>
       
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Fredoka:wght@600;700;900&display=swap');
@@ -613,13 +628,15 @@ export default function LandingMenuPage() {
           >
             {cantidadTotal === 0 ? 'Selecciona productos' : 'Continuar con el pedido'}
           </button>
-          <button
-            type="button"
-            onClick={iniciarOrdenConIA}
-            className="basis-full rounded-lg border border-white/20 bg-neutral-900 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition hover:border-[#B03336] hover:bg-[#B03336]/20 sm:basis-auto"
-          >
-            🤖 ¿Necesitas ayuda? Hablar con Gemini
-          </button>
+          {GEMINI_ASSISTANT_ENABLED && (
+            <button
+              type="button"
+              onClick={iniciarOrdenConIA}
+              className="basis-full rounded-lg border border-white/20 bg-neutral-900 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition hover:border-[#B03336] hover:bg-[#B03336]/20 sm:basis-auto"
+            >
+              🤖 ¿Necesitas ayuda? Hablar con Gemini
+            </button>
+          )}
         </div>
       </section>
 
@@ -956,7 +973,7 @@ export default function LandingMenuPage() {
                       autoComplete="tel"
                       type="tel" required value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="Ej. 3213166885"
+                      placeholder="Ej. 311 111 111"
                       className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#B03336] placeholder:text-neutral-400"
                     />
                   </div>

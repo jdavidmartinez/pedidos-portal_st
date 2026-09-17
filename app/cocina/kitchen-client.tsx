@@ -224,6 +224,12 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts, deliveryZones
 
   const handleStatusAction = async (status: OrderStatus) => {
     if (status !== "rejected" && !requireDeliveryFee()) return;
+    if (
+      status === "rejected" &&
+      !window.confirm("¿Seguro que deseas rechazar esta orden? Esta acción no se puede deshacer.")
+    ) {
+      return;
+    }
 
     const updatedOrder = await onUpdate(order.id, { status });
     if (updatedOrder && status === "dispatched") {
