@@ -26,6 +26,7 @@ const order: Order = {
   discountPercent: 0,
   discountAmount: 0,
   campaign: null,
+  deliveryZone: null,
   deliveryFee: null,
   total: 36000,
   observations: "Sin cebolla",

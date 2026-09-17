@@ -16,7 +16,7 @@ it("protects exported text while preserving amounts, CSV structure and stored da
     observations: '@SUM(1,1)\nSin "cebolla"',
     items: [{ name: "Hamburguesa", quantity: 1, variant: "individual", unitPrice: 15000, lineTotal: 15000 }],
     campaign: { id: "test", name: "-1+1", discountPercent: 0 },
-    subtotal: 15000, discountPercent: 0, discountAmount: 0, deliveryFee: 2000, total: 17000,
+    subtotal: 15000, discountPercent: 0, discountAmount: 0, deliveryZone: "zone_1", deliveryFee: 2000, total: 17000,
     status: "received", receivedAt: "2026-09-10T12:00:00.000Z",
     updatedAt: "2026-09-10T12:00:00.000Z", completedAt: null,
   };

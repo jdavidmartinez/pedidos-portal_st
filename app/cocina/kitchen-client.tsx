@@ -6,6 +6,11 @@ import {
   formatDeliveryFee,
   parseDeliveryFee,
 } from "@/lib/orders/delivery-fee";
+import {
+  DEFAULT_DELIVERY_ZONES,
+  type DeliveryZone,
+  type DeliveryZoneConfig,
+} from "@/lib/orders/delivery-zones";
 import { buildOrderWhatsAppUrl } from "@/lib/orders/whatsapp-link";
 import { getTodayInColombia } from "@/lib/orders/date-range";
 import type { Order, OrderStatus, UpdateOrderInput } from "@/types/order";
@@ -138,6 +143,7 @@ interface OrderCardProps {
   updating: boolean;
   onUpdate: (id: string, input: UpdateOrderInput) => Promise<Order | null>;
   menuProducts: MenuProduct[];
+  deliveryZones: DeliveryZoneConfig[];
 }
 
 interface OrdersPagination {
@@ -148,7 +154,10 @@ interface OrdersPagination {
   hasNextPage: boolean;
 }
 
-function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardProps) {
+function OrderCard({ order, now, updating, onUpdate, menuProducts, deliveryZones }: OrderCardProps) {
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | "">(
+    order.deliveryZone ?? ""
+  );
   const [deliveryFee, setDeliveryFee] = useState(
     formatDeliveryFee(order.deliveryFee)
   );
@@ -166,6 +175,7 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
   const [editError, setEditError] = useState("");
 
   const numericDeliveryFee = parseDeliveryFee(deliveryFee);
+
   const whatsappUrl = useMemo(
     () => buildOrderWhatsAppUrl(order, order.deliveryFee),
     [order]
@@ -184,8 +194,20 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
     }
 
     setDeliveryError("");
-    const updatedOrder = await onUpdate(order.id, { deliveryFee: numericDeliveryFee });
-    if (updatedOrder) setDeliveryFee(formatDeliveryFee(updatedOrder.deliveryFee));
+    const updatedOrder = await onUpdate(order.id, {
+      deliveryZone: deliveryZone || null,
+      deliveryFee: numericDeliveryFee,
+    });
+    if (updatedOrder) {
+      setDeliveryZone(updatedOrder.deliveryZone ?? "");
+      setDeliveryFee(formatDeliveryFee(updatedOrder.deliveryFee));
+    }
+  };
+
+  const selectDeliveryZone = (zone: DeliveryZone | "") => {
+    setDeliveryZone(zone);
+    const selectedZone = deliveryZones.find((item) => item.code === zone);
+    if (selectedZone) setDeliveryFee(formatDeliveryFee(selectedZone.fee));
   };
 
   const requireDeliveryFee = () => {
@@ -376,6 +398,32 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
       <div className="grid gap-3 border-t border-white/10 pt-3">
         <div>
           <label
+            htmlFor={`delivery-zone-${order.id}`}
+            className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-white/50"
+          >
+            Zona de domicilio
+          </label>
+          <select
+            id={`delivery-zone-${order.id}`}
+            value={deliveryZone}
+            onChange={(event) => selectDeliveryZone(event.target.value as DeliveryZone | "")}
+            disabled={isFinal || updating}
+            className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2.5 text-sm text-white outline-none focus:border-[#B03336] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="">Selecciona según la dirección</option>
+            {deliveryZones.map((zone) => (
+              <option key={zone.code} value={zone.code}>
+                {zone.name} · {formatCOP(zone.fee)}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-white/45">
+            La zona propone un valor; puedes ajustarlo antes de guardar.
+          </p>
+        </div>
+
+        <div>
+          <label
             htmlFor={`delivery-${order.id}`}
             className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-white/50"
           >
@@ -461,7 +509,11 @@ function OrderCard({ order, now, updating, onUpdate, menuProducts }: OrderCardPr
           <button
             type="button"
             disabled={updating}
-            onClick={() => void handleStatusAction("rejected")}
+            onClick={() => {
+              if (window.confirm(`¿Seguro que deseas rechazar la orden ${formatOrderNumber(order.number)}?`)) {
+                void handleStatusAction("rejected");
+              }
+            }}
             className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-[11px] font-black uppercase tracking-wider transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               borderColor: "#f87171",
@@ -604,6 +656,7 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [pendingPreviousOrders, setPendingPreviousOrders] = useState<Order[]>([]);
   const [menuProducts, setMenuProducts] = useState<MenuProduct[]>([]);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZoneConfig[]>(DEFAULT_DELIVERY_ZONES);
   const [authState, setAuthState] = useState<
     "checking" | "authenticated" | "unauthenticated"
   >("checking");
@@ -703,6 +756,21 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
     }
   }, [page]);
 
+  const loadDeliveryZones = useCallback(async () => {
+    try {
+      const response = await fetch("/api/delivery-zones", { cache: "no-store" });
+      const payload = (await response.json()) as { zones?: DeliveryZoneConfig[]; error?: string };
+      if (response.status === 401) {
+        window.location.replace("/cocina/login");
+        return;
+      }
+      if (!response.ok || !payload.zones) throw new Error(payload.error || "No fue posible consultar las zonas de domicilio.");
+      setDeliveryZones(payload.zones);
+    } catch (zoneError) {
+      setError(zoneError instanceof Error ? zoneError.message : "No fue posible consultar las zonas de domicilio.");
+    }
+  }, []);
+
   useEffect(() => {
     if (authState !== "authenticated") return;
 
@@ -721,13 +789,19 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
         setError("No fue posible cargar el menú para editar órdenes.")
       );
 
-    const initialLoad = window.setTimeout(() => void loadOrders(), 0);
-    const polling = window.setInterval(() => void loadOrders(), 4000);
+    const initialLoad = window.setTimeout(() => {
+      void loadOrders();
+      void loadDeliveryZones();
+    }, 0);
+    const polling = window.setInterval(() => {
+      void loadOrders();
+      void loadDeliveryZones();
+    }, 4000);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(polling);
     };
-  }, [authState, loadOrders]);
+  }, [authState, loadDeliveryZones, loadOrders]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -962,6 +1036,7 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
                       updating={updatingIds.has(order.id)}
                       onUpdate={updateOrder}
                       menuProducts={menuProducts}
+                      deliveryZones={deliveryZones}
                     />
                   ))}
                 </div>
@@ -994,6 +1069,7 @@ export default function KitchenPage({ role }: { role: "admin" | "kitchen" }) {
                       updating={updatingIds.has(order.id)}
                       onUpdate={updateOrder}
                       menuProducts={menuProducts}
+                      deliveryZones={deliveryZones}
                     />
                   ))}
                 </div>

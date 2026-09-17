@@ -66,6 +66,7 @@ interface OrderRow {
   campaign_name: string | null;
   discount_percent: number | string;
   discount_amount: number | string;
+  delivery_zone: Order["deliveryZone"];
   delivery_fee: number | string | null;
   total: number | string;
   observations: string | null;
@@ -79,6 +80,7 @@ interface OrderRow {
 interface CurrentOrderRow {
   id: string;
   status: OrderStatus;
+  delivery_zone: Order["deliveryZone"];
   delivery_fee: number | string | null;
   subtotal: number | string;
   discount_amount: number | string;
@@ -185,6 +187,7 @@ function toOrder(row: OrderRow): Order {
             discountPercent: toNumber(row.discount_percent),
           }
         : null,
+    deliveryZone: row.delivery_zone,
     deliveryFee:
       row.delivery_fee === null ? null : toNumber(row.delivery_fee),
     total: toNumber(row.total),
@@ -280,6 +283,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.campaign_name,
         o.discount_percent,
         o.discount_amount,
+        o.delivery_zone,
         o.delivery_fee,
         o.total,
         o.observations,
@@ -329,6 +333,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.campaign_name,
         o.discount_percent,
         o.discount_amount,
+        o.delivery_zone,
         o.delivery_fee,
         o.total,
         o.observations,
@@ -362,7 +367,7 @@ class PostgresOrderRepository implements OrderRepository {
   async update(id: string, input: UpdateOrderInput) {
     const sql = getSql();
     const currentRows = (await sql`
-      SELECT id, status, delivery_fee, subtotal, discount_amount,
+      SELECT id, status, delivery_zone, delivery_fee, subtotal, discount_amount,
         discount_percent, completed_at
       FROM orders
       WHERE id = ${id}
@@ -512,7 +517,7 @@ class PostgresOrderRepository implements OrderRepository {
     }
 
     if (
-      input.deliveryFee !== undefined &&
+      (input.deliveryFee !== undefined || input.deliveryZone !== undefined) &&
       (current.status === "dispatched" || current.status === "rejected")
     ) {
       throw new InvalidOrderTransitionError(
@@ -524,6 +529,8 @@ class PostgresOrderRepository implements OrderRepository {
     const currentDeliveryFee =
       current.delivery_fee === null ? null : toNumber(current.delivery_fee);
     const nextDeliveryFee = input.deliveryFee ?? currentDeliveryFee;
+    const nextDeliveryZone =
+      input.deliveryZone === undefined ? current.delivery_zone : input.deliveryZone;
     const now = new Date().toISOString();
     const completedAt =
       nextStatus === "dispatched" || nextStatus === "rejected"
@@ -534,6 +541,7 @@ class PostgresOrderRepository implements OrderRepository {
       UPDATE orders
       SET
         status = ${nextStatus},
+        delivery_zone = ${nextDeliveryZone},
         delivery_fee = ${nextDeliveryFee},
         total = subtotal - discount_amount + COALESCE(${nextDeliveryFee}, 0),
         updated_at = ${now},
@@ -565,6 +573,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.campaign_name,
         o.discount_percent,
         o.discount_amount,
+        o.delivery_zone,
         o.delivery_fee,
         o.total,
         o.observations,
@@ -611,6 +620,7 @@ class PostgresOrderRepository implements OrderRepository {
         o.campaign_name,
         o.discount_percent,
         o.discount_amount,
+        o.delivery_zone,
         o.delivery_fee,
         o.total,
         o.observations,

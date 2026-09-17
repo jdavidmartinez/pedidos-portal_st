@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ORDER_STATUSES } from "@/types/order";
+import { DELIVERY_ZONES } from "@/lib/orders/delivery-zones";
 import { DATA_PROCESSING_POLICY_VERSION } from "@/lib/privacy/data-processing";
 
 const customerSchema = z.object({
@@ -27,6 +28,7 @@ export const createOrderSchema = z.object({
 export const updateOrderSchema = z
   .object({
     status: z.enum(ORDER_STATUSES).optional(),
+    deliveryZone: z.enum(DELIVERY_ZONES).nullable().optional(),
     deliveryFee: z.number().int().min(0).max(1_000_000).optional(),
     customer: customerSchema.optional(),
     items: z.array(orderItemSchema).min(1).max(50).optional(),
@@ -36,6 +38,7 @@ export const updateOrderSchema = z
   .refine(
     (value) =>
       value.status !== undefined ||
+      value.deliveryZone !== undefined ||
       value.deliveryFee !== undefined ||
       value.customer !== undefined ||
       value.items !== undefined ||

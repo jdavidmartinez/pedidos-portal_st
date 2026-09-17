@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import AdminCampaignsClient from "./admin-campaigns-client";
 import AdminBlobCleanup from "./admin-blob-cleanup";
+import AdminDeliveryZonesClient from "./admin-delivery-zones-client";
 import AdminImageUploader from "./admin-image-uploader";
 
 interface Product {
@@ -241,6 +242,7 @@ export default function AdminMenuClient({ username }: Props) {
       </header>
 
       <AdminCampaignsClient />
+      <AdminDeliveryZonesClient />
       <AdminBlobCleanup />
 
       <div className="mx-auto grid max-w-[1600px] gap-5 px-4 py-5 lg:grid-cols-[240px_minmax(0,1fr)]">

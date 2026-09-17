@@ -71,6 +71,15 @@ describe("updateOrderSchema", () => {
     expect(updateOrderSchema.safeParse({ deliveryFee: 5000 }).success).toBe(
       true
     );
+    expect(updateOrderSchema.safeParse({ deliveryZone: "zone_1" }).success).toBe(
+      true
+    );
+    expect(updateOrderSchema.safeParse({ deliveryZone: null }).success).toBe(
+      true
+    );
+    expect(updateOrderSchema.safeParse({ deliveryZone: "north" }).success).toBe(
+      false
+    );
   });
 
   it("permite corregir el contenido de la orden sin motivo", () => {

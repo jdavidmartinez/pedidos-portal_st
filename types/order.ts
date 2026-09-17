@@ -8,6 +8,7 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type OrderItemVariant = "individual" | "combo";
+export type DeliveryZone = "zone_1" | "zone_2" | "zone_3" | "zone_4";
 
 export interface OrderItem {
   name: string;
@@ -38,6 +39,7 @@ export interface Order {
   discountPercent: number;
   discountAmount: number;
   campaign: OrderCampaign | null;
+  deliveryZone: DeliveryZone | null;
   deliveryFee: number | null;
   total: number;
   observations: string | null;
@@ -65,6 +67,7 @@ export interface CreateOrderInput {
 
 export interface UpdateOrderInput {
   status?: OrderStatus;
+  deliveryZone?: DeliveryZone | null;
   deliveryFee?: number;
   customer?: OrderCustomer;
   items?: Array<{
