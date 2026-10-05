@@ -7,11 +7,12 @@ Configurar `RESEND_API_KEY`, `PASSWORD_RESET_FROM` y `APP_ORIGIN` en cada ambien
 `APP_ORIGIN` debe ser el origen HTTPS exacto del despliegue; local admite
 `http://localhost:3000`. No se construyen enlaces con el header Host del cliente.
 
-La dirección inicial autorizada es `jdavid.martinez@gmail.com`. Falta confirmar
-el usuario al que corresponde. No asignar ese correo a todas las cuentas ni
-reenviar a él enlaces de usuarios distintos. Una vez confirmado, asociarlo en
-Neon con una consulta parametrizada, solo a ese usuario. Los demás usuarios sin
-`recovery_email` conservan el restablecimiento por administrador.
+La dirección autorizada para producción es `jdavid.martinez@gmail.com`, asociada
+únicamente al usuario `administrador`. La cuenta Resend conserva ese mismo
+correo. Sin dominio propio, el remitente `onboarding@resend.dev` solo permite
+enviar al correo de esa cuenta. No reenviar a este buzón enlaces de usuarios
+distintos. Los demás usuarios sin `recovery_email` conservan el restablecimiento
+por administrador.
 
 Usar `onboarding@resend.dev` para pruebas con el correo de la cuenta Resend.
 Para otros destinatarios, verificar un dominio y configurar su remitente.
