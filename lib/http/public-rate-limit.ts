@@ -6,6 +6,8 @@ import { reportOperationalError } from "@/lib/observability/server";
 import { RequestError } from "./request-error";
 
 export const PUBLIC_RATE_POLICIES = {
+  recovery: { limit: 5, windowSeconds: 900 },
+  reset: { limit: 10, windowSeconds: 900 },
   orders: { limit: 20, windowSeconds: 600 },
   chat: { limit: 12, windowSeconds: 60 },
 } as const;

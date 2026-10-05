@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -124,6 +125,7 @@ function KitchenLoginForm() {
             {submitting ? "Validando..." : "Iniciar sesión"}
           </button>
         </form>
+        <Link href="/recuperar-contrasena" className="mt-5 block text-center text-sm text-[#facc15] underline">¿Olvidaste tu contraseña?</Link>
       </section>
     </main>
   );

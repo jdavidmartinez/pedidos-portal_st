@@ -277,6 +277,8 @@ class PostgresAuthRepository {
 
     const passwordHash = await hashPassword(newPassword);
     await sql.transaction([
+      sql`SELECT pg_advisory_xact_lock(982451654)`,
+      sql`DELETE FROM auth_password_resets WHERE user_id = ${userId}`,
       sql`
         UPDATE auth_users
         SET password_hash = ${passwordHash}, updated_at = now()
@@ -294,6 +296,8 @@ class PostgresAuthRepository {
     if (users.length === 0) throw new AuthUserNotFoundError("El usuario no existe.");
     const passwordHash = await hashPassword(newPassword);
     await sql.transaction([
+      sql`SELECT pg_advisory_xact_lock(982451654)`,
+      sql`DELETE FROM auth_password_resets WHERE user_id = ${userId}`,
       sql`
         UPDATE auth_users
         SET password_hash = ${passwordHash}, updated_at = now()
